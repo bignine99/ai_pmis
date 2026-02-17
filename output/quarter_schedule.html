@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026년 1사분기 공정표 - 인천소방학교 신축공사</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #f8f9fc;
+            --bg-panel: #fff;
+            --accent: #2563eb;
+            --accent-soft: rgba(37, 99, 235, 0.08);
+            --border: rgba(0, 0, 0, 0.08);
+            --text: #1e293b;
+            --text-dim: #94a3b8;
+            --row-h: 30px;
+            --cat-h: 34px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text)
+        }
+
+        .hdr {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8edfb 50%, #f0f4ff 100%);
+            border-bottom: 1px solid rgba(37, 99, 235, 0.15);
+            padding: 20px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between
+        }
+
+        .hdr-left h1 {
+            font-size: 21px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1e40af, #2563eb, #3b82f6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        .hdr-left .sub {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 3px
+        }
+
+        .hdr-right {
+            display: flex;
+            gap: 14px
+        }
+
+        .stat {
+            text-align: center;
+            padding: 6px 14px;
+            background: var(--accent-soft);
+            border: 1px solid rgba(37, 99, 235, 0.12);
+            border-radius: 8px
+        }
+
+        .stat .n {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--accent)
+        }
+
+        .stat .lb {
+            font-size: 10px;
+            color: var(--text-dim)
+        }
+
+        .tb {
+            padding: 8px 28px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--border);
+            background: rgba(248, 250, 252, 0.9);
+            align-items: center
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 11px;
+            border-radius: 14px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            user-select: none
+        }
+
+        .chip.on {
+            border-color: rgba(0, 0, 0, 0.15)
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%
+        }
+
+        .cA {
+            background: rgba(37, 99, 235, 0.1);
+            color: #1e40af
+        }
+
+        .cA .dot {
+            background: #2563eb
+        }
+
+        .cB {
+            background: rgba(22, 163, 74, 0.1);
+            color: #166534
+        }
+
+        .cB .dot {
+            background: #16a34a
+        }
+
+        .cC {
+            background: rgba(234, 88, 12, 0.1);
+            color: #9a3412
+        }
+
+        .cC .dot {
+            background: #ea580c
+        }
+
+        .cD {
+            background: rgba(147, 51, 234, 0.1);
+            color: #6b21a8
+        }
+
+        .cD .dot {
+            background: #9333ea
+        }
+
+        .sep {
+            width: 1px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.1);
+            margin: 0 6px
+        }
+
+        .tb label {
+            font-size: 11px;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer
+        }
+
+        .tb input[type=checkbox] {
+            accent-color: var(--accent)
+        }
+
+        .wrap {
+            display: flex
+        }
+
+        .lp {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background: var(--bg-panel);
+            min-width: 420px;
+            flex-shrink: 0;
+            border-right: 1px solid #e2e8f0
+        }
+
+        .rp {
+            flex: 1;
+            overflow-x: auto;
+            position: relative
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            height: var(--row-h);
+            border-bottom: 1px solid #f1f5f9;
+            padding: 0 10px;
+            font-size: 11px;
+            transition: background 0.12s;
+            white-space: nowrap
+        }
+
+        .row:hover {
+            background: rgba(37, 99, 235, 0.04)
+        }
+
+        .row .tag {
+            width: 4px;
+            height: 16px;
+            border-radius: 2px;
+            margin-right: 8px;
+            flex-shrink: 0
+        }
+
+        .row .nm {
+            color: #334155;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0
+        }
+
+        .row .dt {
+            color: #94a3b8;
+            font-size: 10px;
+            padding-left: 6px;
+            flex-shrink: 0
+        }
+
+        .chdr {
+            height: var(--cat-h);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 12px;
+            font-weight: 600;
+            border-bottom: 1px solid #e2e8f0;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc
+        }
+
+        .tl-m {
+            display: flex;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: var(--bg-panel)
+        }
+
+        .mc {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            padding: 8px 0 2px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #f1f5f9
+        }
+
+        .tl-w {
+            display: flex;
+            position: sticky;
+            top: 36px;
+            z-index: 5;
+            background: var(--bg-panel)
+        }
+
+        .wc {
+            text-align: center;
+            font-size: 9px;
+            color: var(--text-dim);
+            padding: 2px 0 4px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #f8fafc
+        }
+
+        .wc.now {
+            color: #dc2626;
+            font-weight: 600
+        }
+
+        .ba {
+            position: relative;
+            height: var(--row-h);
+            border-bottom: 1px solid #f1f5f9
+        }
+
+        .cba {
+            height: var(--cat-h);
+            border-bottom: 1px solid #e2e8f0;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc
+        }
+
+        .b {
+            position: absolute;
+            top: 7px;
+            height: 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: 500;
+            color: #fff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap
+        }
+
+        .b:hover {
+            transform: scaleY(1.4);
+            z-index: 20;
+            filter: brightness(1.1)
+        }
+
+        .bA {
+            background: linear-gradient(90deg, #1d4ed8, #3b82f6);
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25)
+        }
+
+        .bB {
+            background: linear-gradient(90deg, #15803d, #22c55e);
+            box-shadow: 0 1px 3px rgba(22, 163, 74, 0.25)
+        }
+
+        .bC {
+            background: linear-gradient(90deg, #c2410c, #f97316);
+            box-shadow: 0 1px 3px rgba(234, 88, 12, 0.25)
+        }
+
+        .bD {
+            background: linear-gradient(90deg, #7e22ce, #a855f7);
+            box-shadow: 0 1px 3px rgba(147, 51, 234, 0.25)
+        }
+
+        .stub-l::before {
+            content: '';
+            position: absolute;
+            left: -5px;
+            top: 4px;
+            border: 4px solid transparent;
+            border-right: 5px solid rgba(37, 99, 235, 0.5)
+        }
+
+        .stub-r::after {
+            content: '';
+            position: absolute;
+            right: -5px;
+            top: 4px;
+            border: 4px solid transparent;
+            border-left: 5px solid rgba(37, 99, 235, 0.5)
+        }
+
+        .gl {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(0, 0, 0, 0.04);
+            pointer-events: none
+        }
+
+        .glm {
+            background: rgba(0, 0, 0, 0.08)
+        }
+
+        .tdy {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dc2626;
+            z-index: 14;
+            pointer-events: none
+        }
+
+        .tdy::after {
+            content: 'TODAY';
+            position: absolute;
+            top: -15px;
+            left: -14px;
+            font-size: 8px;
+            font-weight: 700;
+            color: #dc2626;
+            letter-spacing: 0.8px
+        }
+
+        .rsvg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 12;
+            overflow: visible
+        }
+
+        .rp-line {
+            fill: none;
+            stroke-width: 1.3
+        }
+
+        .tip {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.97);
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 11px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+            min-width: 260px;
+            max-width: 380px
+        }
+
+        .tip .tn {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 6px;
+            word-break: keep-all
+        }
+
+        .tip .tr {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+            border-bottom: 1px solid #f1f5f9
+        }
+
+        .tip .tl2 {
+            color: #94a3b8;
+            flex-shrink: 0
+        }
+
+        .tip .tv {
+            color: #1e293b;
+            font-weight: 500
+        }
+    </style>
+</head>
+
+<body>
+    <div class="hdr">
+        <div class="hdr-left">
+            <h1>2026년 1사분기 공정표</h1>
+            <div class="sub">인천소방학교 신축공사 EVMS | HOW3 작업명 기준 | 2026.01 ~ 2026.03</div>
+        </div>
+        <div class="hdr-right" id="stats"></div>
+    </div>
+    <div class="tb" id="tb"></div>
+    <div class="wrap">
+        <div class="lp" id="lp"></div>
+        <div class="rp" id="rp">
+            <div id="tlh"></div>
+            <div id="bp" style="position:relative;"></div>
+        </div>
+    </div>
+    <div class="tip" id="tip"></div>
+    <script>
+        const D = [{ "id": 0, "category": "건축공사", "categoryCode": "A", "name": "본관동 본관동 골재비", "fullName": "건축공사 | 본관동 본관동 골재비 | 2025-06-02 | 2027-07-07", "start": "2025-06-02", "end": "2027-07-07", "clipStart": "2026-01-01", "clipEnd": "2026-03-31", "duration": 765, "count": 2, "cost": 24070000.0, "dong": "01_본관동", "floor": "" }, { "id": 1, "category": "건축공사", "categoryCode": "A", "name": "본관동 본관동 운반비", "fullName": "건축공사 | 본관동 본관동 운반비 | 2025-06-02 | 2027-07-07", "start": "2025-06-02", "end": "2027-07-07", "clipStart": "2026-01-01", "clipEnd": "2026-03-31", "duration": 765, "count": 5, "cost": 56892320.0, "dong": "01_본관동", "floor": "" }, { "id": 2, "category": "건축공사", "categoryCode": "A", "name": "본관동 본관동 작업설부산물", "fullName": "건축공사 | 본관동 본관동 작업설부산물 | 2025-06-02 | 2027-07-07", "start": "2025-06-02", "end": "2027-07-07", "clipStart": "2026-01-01", "clipEnd": "2026-03-31", "duration": 765, "count": 28, "cost": 2965991969.0, "dong": "01_본관동", "floor": "" }, { "id": 3, "category": "건축공사", "categoryCode": "A", "name": "본관동 B1 본관동 B1 철골공사", "fullName": "건축공사 | 본관동 B1 본관동 B1 철골공사 | 2025-11-20 | 2026-03-10", "start": "2025-11-20", "end": "2026-03-10", "clipStart": "2026-01-01", "clipEnd": "2026-03-10", "duration": 110, "count": 19, "cost": 2646101.0, "dong": "01_본관동", "floor": "02_B1" }, { "id": 4, "category": "건축공사", "categoryCode": "A", "name": "본관동 B1 본관동 B1 철근콘크리트공사", "fullName": "건축공사 | 본관동 B1 본관동 B1 철근콘크리트공사 | 2025-11-20 | 2026-03-10", "start": "2025-11-20", "end": "2026-03-10", "clipStart": "2026-01-01", "clipEnd": "2026-03-10", "duration": 110, "count": 33, "cost": 100751171.0, "dong": "01_본관동", "floor": "02_B1" }, { "id": 5, "category": "건축공사", "categoryCode": "A", "name": "본관동 F1 본관동 1F 철골공사", "fullName": "건축공사 | 본관동 F1 본관동 1F 철골공사 | 2026-03-10 | 2026-04-15", "start": "2026-03-10", "end": "2026-04-15", "clipStart": "2026-03-10", "clipEnd": "2026-03-31", "duration": 36, "count": 19, "cost": 22392489.0, "dong": "01_본관동", "floor": "03_F1" }, { "id": 6, "category": "건축공사", "categoryCode": "A", "name": "본관동 F1 본관동 1F 철근콘크리트공사", "fullName": "건축공사 | 본관동 F1 본관동 1F 철근콘크리트공사 | 2026-03-10 | 2026-04-15", "start": "2026-03-10", "end": "2026-04-15", "clipStart": "2026-03-10", "clipEnd": "2026-03-31", "duration": 36, "count": 33, "cost": 852601183.0, "dong": "01_본관동", "floor": "03_F1" }];
+        const R = [{ "from": 3, "to": 4, "type": "SS", "lag": 0 }, { "from": 5, "to": 6, "type": "SS", "lag": 0 }, { "from": 4, "to": 5, "type": "FS", "lag": 0 }];
+        const QS = new Date('2026-01-01'), QE = new Date('2026-03-31'), NOW = new Date();
+        const MS = 86400000, PXD = 8, TDAYS = 90, TW = TDAYS * PXD, RH = 30, CH = 34;
+
+        const C = {
+            A: { l: '건축공사', c: '#2563eb', t: '#1d4ed8', ch: 'cA', b: 'bA', sc: 'rgba(37,99,235,0.6)' },
+            B: { l: '토목공사', c: '#16a34a', t: '#15803d', ch: 'cB', b: 'bB', sc: 'rgba(22,163,74,0.6)' },
+            C: { l: '조경공사', c: '#ea580c', t: '#c2410c', ch: 'cC', b: 'bC', sc: 'rgba(234,88,12,0.6)' },
+            D: { l: '기계설비공사', c: '#9333ea', t: '#7e22ce', ch: 'cD', b: 'bD', sc: 'rgba(147,51,234,0.6)' }
+        };
+
+        document.getElementById('stats').innerHTML =
+            `<div class="stat"><div class="n">${D.length}</div><div class="lb">액티비티</div></div>` +
+            `<div class="stat"><div class="n">${D.reduce((s, d) => s + d.count, 0).toLocaleString()}</div><div class="lb">세부 항목</div></div>` +
+            `<div class="stat"><div class="n">${R.length}</div><div class="lb">선후행 관계</div></div>`;
+
+        let af = new Set(['A', 'B', 'C', 'D']);
+        const tb = document.getElementById('tb');
+        Object.entries(C).forEach(([k, v]) => {
+            const e = document.createElement('div');
+            e.className = `chip ${v.ch} on`; e.innerHTML = `<span class="dot"></span>${v.l}`;
+            e.onclick = () => { af.has(k) ? (af.delete(k), e.classList.remove('on'), e.style.opacity = '0.3') : (af.add(k), e.classList.add('on'), e.style.opacity = '1'); render(); };
+            tb.appendChild(e);
+        });
+        const sepEl = document.createElement('div'); sepEl.className = 'sep'; tb.appendChild(sepEl);
+        let showRel = true;
+        const rlbl = document.createElement('label');
+        rlbl.innerHTML = '<input type="checkbox" checked id="relChk"> Relation 표시';
+        rlbl.querySelector('input').onchange = (e) => { showRel = e.target.checked; render(); };
+        tb.appendChild(rlbl);
+
+        function dayX(ds) { return Math.max(0, (new Date(ds) - QS) / MS) * PXD; }
+        function dayXE(ds) { return Math.min(TDAYS, (new Date(ds) - QS) / MS + 1) * PXD; }
+
+        function buildTL() {
+            const h = document.getElementById('tlh');
+            const months = [{ l: '1월', d: 31 }, { l: '2월', d: 28 }, { l: '3월', d: 31 }];
+            let mh = '', wh = '', off = 0;
+            months.forEach(m => {
+                mh += `<div class="mc" style="width:${m.d * PXD}px">${m.l}</div>`;
+                for (let i = 0; i < m.d; i += 7) {
+                    const wd = Math.min(7, m.d - i) * PXD;
+                    const dt = new Date(QS.getTime() + (off + i) * MS);
+                    const isNow = NOW >= dt && NOW < new Date(dt.getTime() + 7 * MS);
+                    wh += `<div class="wc${isNow ? ' now' : ''}" style="width:${wd}px">${dt.getMonth() + 1}/${dt.getDate()}</div>`;
+                }
+                off += m.d;
+            });
+            h.innerHTML = `<div class="tl-m">${mh}</div><div class="tl-w">${wh}</div>`;
+        }
+
+        function render() {
+            buildTL();
+            const lp = document.getElementById('lp'), bp = document.getElementById('bp');
+            bp.style.width = TW + 'px';
+            const fd = D.filter(d => af.has(d.categoryCode));
+            let grp = {};
+            fd.forEach(d => { if (!grp[d.categoryCode]) grp[d.categoryCode] = []; grp[d.categoryCode].push(d); });
+            let lH = '', bH = '', rmap = {}, ri = 0;
+            for (let d = 0; d < TDAYS; d += 7) { bH += `<div class="gl" style="left:${d * PXD}px;"></div>`; }
+            [0, 31, 59].forEach(d => { bH += `<div class="gl glm" style="left:${d * PXD}px;"></div>`; });
+            const to = (NOW - QS) / MS;
+            if (to >= 0 && to <= TDAYS) bH += `<div class="tdy" style="left:${to * PXD}px;"></div>`;
+            let barPositions = {};
+            ['A', 'B', 'C', 'D'].forEach(cc => {
+                if (!grp[cc]) return;
+                const cat = C[cc];
+                lH += `<div class="chdr" style="color:${cat.c}"><span style="display:inline-block;width:4px;height:16px;border-radius:2px;background:${cat.t};margin-right:8px;"></span>${cat.l} (${grp[cc].length})</div>`;
+                bH += `<div class="cba" style="width:${TW}px;"></div>`;
+                ri++;
+                grp[cc].forEach(act => {
+                    rmap[act.id] = ri;
+                    const lx = dayX(act.clipStart), rx = dayXE(act.clipEnd), bw = Math.max(rx - lx, 4);
+                    const actS = new Date(act.start), actE = new Date(act.end);
+                    const sl = actS < QS ? ' stub-l' : '', sr = actE > QE ? ' stub-r' : '';
+                    const bl = bw > 80 ? act.name : (bw > 35 ? act.duration + 'd' : '');
+                    barPositions[act.id] = { left: lx, right: lx + bw, y: ri * RH + RH / 2 };
+                    lH += `<div class="row"><span class="tag" style="background:${cat.t}"></span><span class="nm" title="${act.fullName}">${act.name}</span><span class="dt">${act.start} ~ ${act.end}</span></div>`;
+                    bH += `<div class="ba" style="width:${TW}px;"><div class="b ${cat.b}${sl}${sr}" style="left:${lx}px;width:${bw}px;" data-fn="${act.fullName}" data-s="${act.start}" data-e="${act.end}" data-d="${act.duration}" data-c="${act.count}" data-co="${act.cost}" data-dn="${act.dong}" data-fl="${act.floor}" onmouseenter="showT(event,this)" onmouseleave="hideT()">${bl}</div></div>`;
+                    ri++;
+                });
+            });
+            lp.innerHTML = lH; bp.innerHTML = bH;
+            if (showRel) drawRels(barPositions, rmap);
+        }
+
+        function drawRels(pos, rmap) {
+            const bp = document.getElementById('bp');
+            const old = bp.querySelector('.rsvg'); if (old) old.remove();
+            const fr = R.filter(r => rmap[r.from] !== undefined && rmap[r.to] !== undefined);
+            if (!fr.length) return;
+            const ns = 'http://www.w3.org/2000/svg';
+            const svg = document.createElementNS(ns, 'svg');
+            svg.classList.add('rsvg'); svg.style.width = TW + 'px'; svg.style.height = bp.scrollHeight + 'px';
+            const defs = document.createElementNS(ns, 'defs');
+            ['A', 'B', 'C', 'D'].forEach(cc => {
+                const mk = document.createElementNS(ns, 'marker');
+                mk.setAttribute('id', 'ah-' + cc); mk.setAttribute('markerWidth', '7'); mk.setAttribute('markerHeight', '5');
+                mk.setAttribute('refX', '7'); mk.setAttribute('refY', '2.5'); mk.setAttribute('orient', 'auto');
+                const pg = document.createElementNS(ns, 'polygon');
+                pg.setAttribute('points', '0 0, 7 2.5, 0 5');
+                pg.setAttribute('fill', C[cc] ? C[cc].sc : 'rgba(100,100,100,0.5)');
+                mk.appendChild(pg); defs.appendChild(mk);
+            });
+            svg.appendChild(defs);
+            fr.forEach(rel => {
+                const fAct = D.find(d => d.id === rel.from), tAct = D.find(d => d.id === rel.to);
+                if (!fAct || !tAct) return;
+                const fp = pos[rel.from], tp = pos[rel.to]; if (!fp || !tp) return;
+                const cc = fAct.categoryCode;
+                const strokeColor = C[cc] ? C[cc].sc : 'rgba(100,100,100,0.4)';
+                const p = document.createElementNS(ns, 'path');
+                if (rel.type === 'SS') {
+                    const x1 = fp.left - 2, y1 = fp.y, x2 = tp.left - 2, y2 = tp.y, dropX = Math.min(x1, x2) - 12;
+                    p.setAttribute('d', `M${x1} ${y1} H${dropX} V${y2} H${x2}`);
+                    p.setAttribute('stroke-dasharray', '4,3');
+                } else {
+                    const x1 = fp.right + 2, y1 = fp.y, x2 = tp.left - 2, y2 = tp.y;
+                    if (Math.abs(y1 - y2) < 3) { p.setAttribute('d', `M${x1} ${y1} L${x2} ${y2}`); }
+                    else { const mx = Math.max(x1 + 6, (x1 + x2) / 2); p.setAttribute('d', `M${x1} ${y1} H${mx} V${y2} H${x2}`); }
+                }
+                p.classList.add('rp-line'); p.setAttribute('stroke', strokeColor);
+                p.setAttribute('marker-end', `url(#ah-${cc})`); svg.appendChild(p);
+            });
+            bp.appendChild(svg);
+        }
+
+        const tip = document.getElementById('tip');
+        function showT(ev, el) {
+            const co = parseFloat(el.dataset.co);
+            const cs = co > 0 ? (co / 10000).toLocaleString(undefined, { maximumFractionDigits: 0 }) + '만원' : '-';
+            const fl = el.dataset.fl || '-';
+            tip.innerHTML =
+                `<div class="tn">${el.dataset.fn}</div>` +
+                `<div class="tr"><span class="tl2">기간</span><span class="tv">${el.dataset.s} ~ ${el.dataset.e}</span></div>` +
+                `<div class="tr"><span class="tl2">일수</span><span class="tv">${el.dataset.d}일</span></div>` +
+                `<div class="tr"><span class="tl2">동/층</span><span class="tv">${el.dataset.dn} / ${fl}</span></div>` +
+                `<div class="tr"><span class="tl2">세부항목</span><span class="tv">${parseInt(el.dataset.c).toLocaleString()}건</span></div>` +
+                `<div class="tr"><span class="tl2">공사비</span><span class="tv">${cs}</span></div>`;
+            tip.style.display = 'block';
+            const r = tip.getBoundingClientRect();
+            let x = ev.clientX + 14, y = ev.clientY - 16;
+            if (x + r.width > window.innerWidth) x = ev.clientX - r.width - 14;
+            if (y + r.height > window.innerHeight) y = ev.clientY - r.height;
+            tip.style.left = x + 'px'; tip.style.top = y + 'px';
+        }
+        function hideT() { tip.style.display = 'none'; }
+        render();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주간 네트워크 공정표 | 인천소방학교 신축공사</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: #f8f9fc;
+            color: #333;
+        }
+
+        .top-header {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8edfb 50%, #f0f4ff 100%);
+            border-bottom: 1px solid rgba(37, 99, 235, 0.15);
+            color: #1e293b;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .top-header h1 {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1e40af, #2563eb, #3b82f6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .top-header .info {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .top-header .today-badge {
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #2563eb;
+        }
+
+        .legend-bar {
+            display: flex;
+            gap: 14px;
+            padding: 8px 24px;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+            align-items: center;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .legend-bar .lg {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .lg-box {
+            width: 20px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .schedule-container {
+            display: flex;
+            overflow: hidden;
+            background: white;
+            border: 1px solid #e2e8f0;
+            margin: 0;
+            height: calc(100vh - 90px);
+        }
+
+        .left-panel {
+            width: 440px;
+            min-width: 440px;
+            border-right: 2px solid #cbd5e1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .left-header {
+            display: flex;
+            background: #334155;
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            min-height: 44px;
+            align-items: center;
+            border-bottom: 1px solid #475569;
+        }
+
+        .left-header .lh-id {
+            width: 65px;
+            text-align: center;
+            padding: 0 4px;
+            border-right: 1px solid #475569;
+        }
+
+        .left-header .lh-name {
+            flex: 1;
+            padding: 0 6px;
+            border-right: 1px solid #475569;
+        }
+
+        .left-header .lh-dur {
+            width: 35px;
+            text-align: center;
+            border-right: 1px solid #475569;
+        }
+
+        .left-header .lh-dt {
+            width: 52px;
+            text-align: center;
+            border-right: 1px solid #475569;
+        }
+
+        .left-header .lh-dt:last-child {
+            border-right: none;
+        }
+
+        .left-body {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .left-body table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .left-body tr.wbs-header {
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            height: 28px;
+        }
+
+        .left-body .wbs-header td {
+            padding: 0 6px;
+            white-space: nowrap;
+        }
+
+        .left-body .wbs-id {
+            width: 65px;
+            text-align: center;
+        }
+
+        .left-body .wbs-name {
+            font-weight: 700;
+        }
+
+        .left-body tr.act-row {
+            height: 28px;
+            font-size: 10.5px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: background .15s;
+        }
+
+        .left-body tr.act-row:hover {
+            background: #eff6ff !important;
+        }
+
+        .left-body .act-id {
+            width: 65px;
+            text-align: center;
+            color: #94a3b8;
+            font-family: monospace;
+            font-size: 10px;
+            border-right: 1px solid #f1f5f9;
+        }
+
+        .left-body .act-name {
+            padding: 0 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
+            border-right: 1px solid #f1f5f9;
+            color: #334155;
+        }
+
+        .left-body .act-dur {
+            width: 35px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 10px;
+            border-right: 1px solid #f1f5f9;
+        }
+
+        .left-body .act-dates {
+            width: 52px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 10px;
+            border-right: 1px solid #f1f5f9;
+        }
+
+        .act-row.status-done {
+            background: #fafffe;
+        }
+
+        .act-row.status-progress {
+            background: #f8faff;
+        }
+
+        .act-row.status-planned {
+            background: #fffef8;
+        }
+
+        .act-row.critical .act-name {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .right-panel {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .timeline-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: white;
+        }
+
+        .week-row {
+            display: flex;
+            border-bottom: 1px solid #cbd5e1;
+            width: 100%;
+        }
+
+        .week-cell {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 0;
+            border-right: 1px solid #e2e8f0;
+            color: #334155;
+            min-width: 0;
+        }
+
+        .day-row {
+            display: flex;
+            border-bottom: 1px solid #94a3b8;
+            width: 100%;
+        }
+
+        .day-cell {
+            flex: 1;
+            text-align: center;
+            font-size: 9px;
+            padding: 1px 0;
+            border-right: 1px solid #f1f5f9;
+            color: #64748b;
+            line-height: 1.2;
+            min-width: 0;
+        }
+
+        .day-cell .day-num {
+            font-weight: 600;
+            font-size: 10px;
+            color: #334155;
+        }
+
+        .day-cell .day-dow {
+            font-size: 8px;
+            color: #94a3b8;
+        }
+
+        .day-weekend {
+            background: #f8fafc;
+        }
+
+        .day-weekend .day-num {
+            color: #cbd5e1 !important;
+        }
+
+        .day-today {
+            background: #eff6ff !important;
+        }
+
+        .day-today .day-num {
+            color: #2563eb !important;
+            font-weight: 800;
+        }
+
+        .timeline-body {
+            position: relative;
+            flex: 1;
+        }
+
+        .timeline-svg {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .bar:hover {
+            filter: brightness(1.1);
+            cursor: pointer;
+        }
+
+        .bar-label {
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="top-header">
+        <div>
+            <h1>📋 주간 네트워크 공정표 (Weekly Schedule)</h1>
+            <div class="info">인천소방학교 신축공사 · 3주간 세부작업 공정표 · Logic Bar Chart (P6 Style)</div>
+        </div>
+        <div class="today-badge">📅 TODAY 2026-02-17 (화)</div>
+    </div>
+
+    <div class="legend-bar">
+        <div class="lg">
+            <div class="lg-box" style="background:#dc2626"></div> Critical (주공정)
+        </div>
+        <div class="lg">
+            <div class="lg-box" style="background:#22c55e"></div> 완료
+        </div>
+        <div class="lg">
+            <div class="lg-box" style="background:#3b82f6"></div> 진행중
+        </div>
+        <div class="lg">
+            <div class="lg-box" style="background:#f97316"></div> 예정
+        </div>
+        <div class="lg">━━ 관계선 (FS: Finish→Start)</div>
+        <div class="lg">▼ TODAY 기준선</div>
+        <div class="lg">◆ WBS 요약바</div>
+    </div>
+
+    <div class="schedule-container">
+        <div class="left-panel">
+            <div class="left-header">
+                <div class="lh-id">Activity ID</div>
+                <div class="lh-name">Activity Name</div>
+                <div class="lh-dur">기간</div>
+                <div class="lh-dt">시작</div>
+                <div class="lh-dt">종료</div>
+            </div>
+            <div class="left-body" id="leftBody">
+                <table>
+                    <tr class="wbs-header" style="background:#2563eb">
+                        <td class="wbs-id">ST</td>
+                        <td class="wbs-name" colspan="4">골조공사 (RC)</td>
+                    </tr>
+                    <tr class="act-row status-done critical" data-id="ST010">
+                        <td class="act-id">ST010</td>
+                        <td class="act-name">B1F A구역 슬래브 콘크리트 양생</td>
+                        <td class="act-dur">5d</td>
+                        <td class="act-dates">02/09</td>
+                        <td class="act-dates">02/13</td>
+                    </tr>
+                    <tr class="act-row status-done" data-id="ST020">
+                        <td class="act-id">ST020</td>
+                        <td class="act-name">B1F A구역 슬래브 거푸집해체</td>
+                        <td class="act-dur">3d</td>
+                        <td class="act-dates">02/13</td>
+                        <td class="act-dates">02/15</td>
+                    </tr>
+                    <tr class="act-row status-done critical" data-id="ST030">
+                        <td class="act-id">ST030</td>
+                        <td class="act-name">B1F B구역 벽체 거푸집설치</td>
+                        <td class="act-dur">4d</td>
+                        <td class="act-dates">02/09</td>
+                        <td class="act-dates">02/12</td>
+                    </tr>
+                    <tr class="act-row status-done critical" data-id="ST040">
+                        <td class="act-id">ST040</td>
+                        <td class="act-name">B1F B구역 벽체 철근배근</td>
+                        <td class="act-dur">4d</td>
+                        <td class="act-dates">02/11</td>
+                        <td class="act-dates">02/14</td>
+                    </tr>
+                    <tr class="act-row status-done critical" data-id="ST050">
+                        <td class="act-id">ST050</td>
+                        <td class="act-name">B1F B구역 벽체 콘크리트타설</td>
+                        <td class="act-dur">2d</td>
+                        <td class="act-dates">02/14</td>
+                        <td class="act-dates">02/15</td>
+                    </tr>
+                    <tr class="act-row status-progress critical" data-id="ST060">
+                        <td class="act-id">ST060</td>
+                        <td class="act-name">B1F B구역 벽체 콘크리트 양생</td>
+                        <td class="act-dur">3d</td>
+                        <td class="act-dates">02/16</td>
+                        <td class="act-dates">02/18</td>
+                    </tr>
+                    <tr class="act-row status-progress" data-id="ST070">
+                        <td class="act-id">ST070</td>
+                        <td class="act-name">B1F B구역 슬래브 먹매김</td>
+                        <td class="act-dur">2d</td>
+                        <td class="act-dates">02/16</td>
+                        <td class="act-dates">02/17</td>
+                    </tr>
+                    <tr class="act-row status-progress critical" data-id="ST080">
+                        <td class="act-id">ST080</td>
+                        <td class="act-name">B1F B구역 슬래브 거푸집설치</td>
+                        <td class="act-dur">4d</td>
+                        <td class="act-dates">02/17</td>
+                        <td class="act-dates">02/20</td>
+                    </tr>
+                    <tr class="act-row status-planned critical" data-id="ST090">
+                        <td class="act-id">ST090</td>
+                        <td class="act-name">B1F B구역 슬래브 철근배근</td>
+                        <td class="act-dur">4d</td>
+                        <td class="act-dates">02/19</td>
+                        <td class="act-dates">02/22</td>
+                    </tr>
+                    <tr class="act-row status-planned critical" data-id="ST100">
+                        <td class="act-id">ST100</td>
+                        <td class="act-name">B1F B구역 슬래브 콘크리트타설</td>
+                        <td class="act-dur">2d</td>
+                        <td class="act-dates">02/23</td>
+                        <td class="act-dates">02/24</td>
+                    </tr>
+                    <tr class="act-row status-planned critical" data-id="ST110">
+                        <td class="act-id">ST110</td>
+                        <td class="act-name">B1F B구역 슬래브 콘크리트 양생</td>
+                        <td class="act-dur">5d</td>
+                        <td class="act-dates">02/24</td>
+                        <td class="act-dates">02/28</td>
+                    </tr>
+                    <tr class="act-row status-progress" data-id="ST120">
+                        <td class="act-id">ST120</td>
+                        <td class="act-name">B1F A구역 벽체 거푸집해체</td>
+                        <td class="act-dur">3d</td>
+                        <td class="act-dates">02/16</td>
+                        <td class="act-dates">02/18</td>
+                    </tr>
+                    <tr class="act-row status-planned" data-id="ST130">
+                        <td class="act-id">ST130</td>
+                        <td class="act-name">B1F B구역 벽체 거푸집해체</td>
+                        <td class="act-dur">3d</td>
+                        <td class="act-dates">02/23</td>
+                        <td class="act-dates">02/25</td>
+                    </tr>
+                    <tr class="wbs-header" style="background:#7c3aed">
+                        <td class="wbs-id">SC</td>
+                        <td class="wbs-name" colspan="4">철골공사</td>
+                    </tr>
+                    <tr class="act-row status-done" data-id="SC010">
+                        <td class="act-id">SC010</td>
+                        <td class="act-name">B1F 철골부재 양중·설치</td>
+                        <td class="act-dur">5d</td>
+                        <td class="act-dates">02/10</td>
+                        <td class="act-dates">02/14</td>
+                    </tr>
+                    <tr class="act-row status-progress" data-id="SC020">
+                        <td class="act-id">SC020</td>
+                        <td class="act-name">B1F 철골 고력볼트 체결</td>
+                        <td class="act-dur">4d</td>
+                        <td class="act-dates">02/16</td>
+                        <td class="act-dates">02/19</td>
+                    </tr>
+                    <tr class="act-row status-planned" data-id="SC030">
+                        <td class="act-id">SC030</td>
+                        <td class="act-name">B1F 철골 내화피복 도포</td>
+                        <td class="act-dur">5d</td>
+                        <td class="act-dates">02/23</td>
+                        <td class="act-dates">02/27</td>
+                    </tr>
+                    <tr class="wbs-header" style="background:#0891b2">
+                        <td class="wbs-id">ME</td>
+                        <td class="wbs-name" colspan="4">기계설비공사</td>
+                    </tr>
+                    <tr class="act-row status-done" data-id="ME010">
+                        <td class="act-id">ME010</td>
+                        <td class="act-name">B1F B구역 벽체 설비배관 매설</td>
+                        <td class="act-dur">3d</td>
+                        <td class="act-dates">02/12</td>
+                        <td class="act-dates">02/14</td>
+                    </tr>
+                    <tr class="act-row status-planned" data-id="ME020">
+                        <td class="act-id">ME020</td>
+                        <td class="act-name">B1F B구역 슬래브 설비매립배관</td>
+                        <td class="act-dur">3d</td>
+                        <td class="act-dates">02/19</td>
+                        <td class="act-dates">02/21</td>
+                    </tr>
+                    <tr class="wbs-header" style="background:#ea580c">
+                        <td class="wbs-id">EL</td>
+                        <td class="wbs-name" colspan="4">전기공사</td>
+                    </tr>
+                    <tr class="act-row status-planned" data-id="EL010">
+                        <td class="act-id">EL010</td>
+                        <td class="act-name">B1F B구역 슬래브 전기배관 매설</td>
+                        <td class="act-dur">3d</td>
+                        <td class="act-dates">02/19</td>
+                        <td class="act-dates">02/21</td>
+                    </tr>
+                    <tr class="wbs-header" style="background:#16a34a">
+                        <td class="wbs-id">WP</td>
+                        <td class="wbs-name" colspan="4">방수공사</td>
+                    </tr>
+                    <tr class="act-row status-planned" data-id="WP010">
+                        <td class="act-id">WP010</td>
+                        <td class="act-name">B1F 바닥 방수 프라이머 도포</td>
+                        <td class="act-dur">3d</td>
+                        <td class="act-dates">02/18</td>
+                        <td class="act-dates">02/20</td>
+                    </tr>
+                    <tr class="act-row status-planned" data-id="WP020">
+                        <td class="act-id">WP020</td>
+                        <td class="act-name">B1F 바닥 시트방수 시공</td>
+                        <td class="act-dur">5d</td>
+                        <td class="act-dates">02/24</td>
+                        <td class="act-dates">02/28</td>
+                    </tr>
+                    <tr class="wbs-header" style="background:#78716c">
+                        <td class="wbs-id">EW</td>
+                        <td class="wbs-name" colspan="4">토공 / 기초공사</td>
+                    </tr>
+                    <tr class="act-row status-planned" data-id="EW010">
+                        <td class="act-id">EW010</td>
+                        <td class="act-name">B1F 지하층 되메우기 준비</td>
+                        <td class="act-dur">4d</td>
+                        <td class="act-dates">02/25</td>
+                        <td class="act-dates">02/28</td>
+                    </tr>
+                    <tr class="act-row status-planned critical" data-id="EW020">
+                        <td class="act-id">EW020</td>
+                        <td class="act-name">1F 1층기초 버림콘크리트 타설</td>
+                        <td class="act-dur">4d</td>
+                        <td class="act-dates">02/25</td>
+                        <td class="act-dates">02/28</td>
+                    </tr>
+                    <tr class="act-row status-planned critical" data-id="EW030">
+                        <td class="act-id">EW030</td>
+                        <td class="act-name">1F 1층기초 먹매김</td>
+                        <td class="act-dur">2d</td>
+                        <td class="act-dates">02/28</td>
+                        <td class="act-dates">03/01</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="right-panel" id="rightPanel">
+            <div class="timeline-header">
+                <div class="week-row">
+                    <div class="week-cell" style="flex:7;background:#f0fdf4">이전주 (02/09~02/15)</div>
+                    <div class="week-cell" style="flex:7;background:#eff6ff">금주 (02/16~02/22)</div>
+                    <div class="week-cell" style="flex:7;background:#fffbeb">다음주 (02/23~03/01)</div>
+                </div>
+                <div class="day-row">
+                    <div class="day-cell">
+                        <div class="day-num">09</div>
+                        <div class="day-dow">월</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">10</div>
+                        <div class="day-dow">화</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">11</div>
+                        <div class="day-dow">수</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">12</div>
+                        <div class="day-dow">목</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">13</div>
+                        <div class="day-dow">금</div>
+                    </div>
+                    <div class="day-cell day-weekend">
+                        <div class="day-num">14</div>
+                        <div class="day-dow">토</div>
+                    </div>
+                    <div class="day-cell day-weekend">
+                        <div class="day-num">15</div>
+                        <div class="day-dow">일</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">16</div>
+                        <div class="day-dow">월</div>
+                    </div>
+                    <div class="day-cell day-today">
+                        <div class="day-num">17</div>
+                        <div class="day-dow">화</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">18</div>
+                        <div class="day-dow">수</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">19</div>
+                        <div class="day-dow">목</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">20</div>
+                        <div class="day-dow">금</div>
+                    </div>
+                    <div class="day-cell day-weekend">
+                        <div class="day-num">21</div>
+                        <div class="day-dow">토</div>
+                    </div>
+                    <div class="day-cell day-weekend">
+                        <div class="day-num">22</div>
+                        <div class="day-dow">일</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">23</div>
+                        <div class="day-dow">월</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">24</div>
+                        <div class="day-dow">화</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">25</div>
+                        <div class="day-dow">수</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">26</div>
+                        <div class="day-dow">목</div>
+                    </div>
+                    <div class="day-cell">
+                        <div class="day-num">27</div>
+                        <div class="day-dow">금</div>
+                    </div>
+                    <div class="day-cell day-weekend">
+                        <div class="day-num">28</div>
+                        <div class="day-dow">토</div>
+                    </div>
+                    <div class="day-cell day-weekend">
+                        <div class="day-num">01</div>
+                        <div class="day-dow">일</div>
+                    </div>
+                </div>
+            </div>
+            <div class="timeline-body" id="timelineBody">
+                <svg class="timeline-svg" id="timelineSvg" viewBox="0 0 882 850" preserveAspectRatio="none"
+                    xmlns="http://www.w3.org/2000/svg" style="width:100%;height:850px;">
+                    <defs>
+                        <marker id="arr" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto">
+                            <polygon points="0 0,6 2.5,0 5" fill="#64748b" />
+                        </marker>
+                        <marker id="arrc" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto">
+                            <polygon points="0 0,6 2.5,0 5" fill="#dc2626" />
+                        </marker>
+                    </defs>
+                    <!-- Grid -->
+                    <line x1="0" y1="0" x2="0" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="42" y1="0" x2="42" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="84" y1="0" x2="84" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="126" y1="0" x2="126" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="168" y1="0" x2="168" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <rect x="210" y="0" width="42" height="850" fill="rgba(0,0,0,0.02)" />
+                    <line x1="210" y1="0" x2="210" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <rect x="252" y="0" width="42" height="850" fill="rgba(0,0,0,0.02)" />
+                    <line x1="252" y1="0" x2="252" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="294" y1="0" x2="294" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="336" y1="0" x2="336" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="378" y1="0" x2="378" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="420" y1="0" x2="420" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="462" y1="0" x2="462" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <rect x="504" y="0" width="42" height="850" fill="rgba(0,0,0,0.02)" />
+                    <line x1="504" y1="0" x2="504" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <rect x="546" y="0" width="42" height="850" fill="rgba(0,0,0,0.02)" />
+                    <line x1="546" y1="0" x2="546" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="588" y1="0" x2="588" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="630" y1="0" x2="630" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="672" y1="0" x2="672" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="714" y1="0" x2="714" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="756" y1="0" x2="756" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <rect x="798" y="0" width="42" height="850" fill="rgba(0,0,0,0.02)" />
+                    <line x1="798" y1="0" x2="798" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <rect x="840" y="0" width="42" height="850" fill="rgba(0,0,0,0.02)" />
+                    <line x1="840" y1="0" x2="840" y2="850" stroke="#e2e8f0" stroke-width="0.5" />
+                    <line x1="0" y1="0" x2="882" y2="0" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="28" x2="882" y2="28" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="56" x2="882" y2="56" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="84" x2="882" y2="84" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="112" x2="882" y2="112" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="140" x2="882" y2="140" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="168" x2="882" y2="168" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="196" x2="882" y2="196" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="224" x2="882" y2="224" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="252" x2="882" y2="252" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="280" x2="882" y2="280" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="308" x2="882" y2="308" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="336" x2="882" y2="336" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="364" x2="882" y2="364" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="392" x2="882" y2="392" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="420" x2="882" y2="420" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="448" x2="882" y2="448" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="476" x2="882" y2="476" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="504" x2="882" y2="504" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="532" x2="882" y2="532" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="560" x2="882" y2="560" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="588" x2="882" y2="588" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="616" x2="882" y2="616" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="644" x2="882" y2="644" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="672" x2="882" y2="672" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="700" x2="882" y2="700" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="728" x2="882" y2="728" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="756" x2="882" y2="756" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="784" x2="882" y2="784" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="812" x2="882" y2="812" stroke="#f1f5f9" stroke-width="0.5" />
+                    <line x1="0" y1="840" x2="882" y2="840" stroke="#f1f5f9" stroke-width="0.5" />
+                    <!-- TODAY -->
+                    <line x1="357" y1="0" x2="357" y2="850" stroke="#dc2626" stroke-width="2" stroke-dasharray="4,2"
+                        opacity="0.7" />
+                    <polygon points="352,0 362,0 357,8" fill="#dc2626" />
+                    <!-- WBS Summary -->
+                    <line x1="0" y1="11" x2="840" y2="11" stroke="#2563eb" stroke-width="3" />
+                    <polygon points="0,6 6,11 0,16" fill="#2563eb" />
+                    <polygon points="840,6 834,11 840,16" fill="#2563eb" />
+                    <line x1="42" y1="403" x2="798" y2="403" stroke="#7c3aed" stroke-width="3" />
+                    <polygon points="42,398 48,403 42,408" fill="#7c3aed" />
+                    <polygon points="798,398 792,403 798,408" fill="#7c3aed" />
+                    <line x1="126" y1="515" x2="546" y2="515" stroke="#0891b2" stroke-width="3" />
+                    <polygon points="126,510 132,515 126,520" fill="#0891b2" />
+                    <polygon points="546,510 540,515 546,520" fill="#0891b2" />
+                    <line x1="420" y1="599" x2="546" y2="599" stroke="#ea580c" stroke-width="3" />
+                    <polygon points="420,594 426,599 420,604" fill="#ea580c" />
+                    <polygon points="546,594 540,599 546,604" fill="#ea580c" />
+                    <line x1="378" y1="655" x2="840" y2="655" stroke="#16a34a" stroke-width="3" />
+                    <polygon points="378,650 384,655 378,660" fill="#16a34a" />
+                    <polygon points="840,650 834,655 840,660" fill="#16a34a" />
+                    <line x1="672" y1="739" x2="882" y2="739" stroke="#78716c" stroke-width="3" />
+                    <polygon points="672,734 678,739 672,744" fill="#78716c" />
+                    <polygon points="882,734 876,739 882,744" fill="#78716c" />
+                    <!-- Relations -->
+                    <path d="M210,42 L216,42 L216,70 L168,70" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M0,98 L-8,98 L-8,126 L84,126" fill="none" stroke="#dc2626" stroke-width="1.8"
+                        marker-end="url(#arrc)" />
+                    <path d="M252,126 L258,126 L258,154 L210,154" fill="none" stroke="#dc2626" stroke-width="1.8"
+                        marker-end="url(#arrc)" />
+                    <path d="M252,546 L258,546 L258,154 L210,154" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M294,154 L300,154 L300,182 L294,182" fill="none" stroke="#dc2626" stroke-width="1.8"
+                        marker-end="url(#arrc)" />
+                    <path d="M294,154 L300,154 L300,210 L294,210" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M378,210 L384,210 L384,238 L336,238" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M336,238 L328,238 L328,266 L420,266" fill="none" stroke="#dc2626" stroke-width="1.8"
+                        marker-end="url(#arrc)" />
+                    <path d="M588,266 L594,266 L594,294 L588,294" fill="none" stroke="#dc2626" stroke-width="1.8"
+                        marker-end="url(#arrc)" />
+                    <path d="M546,574 L552,574 L552,294 L588,294" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M546,630 L552,630 L552,294 L588,294" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M672,294 L678,294 L678,322 L630,322" fill="none" stroke="#dc2626" stroke-width="1.8"
+                        marker-end="url(#arrc)" />
+                    <path d="M294,70 L300,70 L300,350 L294,350" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M420,182 L426,182 L426,378 L588,378" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M252,434 L258,434 L258,462 L294,462" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M462,462 L468,462 L468,490 L588,490" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M0,98 L-8,98 L-8,546 L126,546" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M336,238 L328,238 L328,574 L420,574" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M336,238 L328,238 L328,630 L420,630" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M420,350 L426,350 L426,686 L378,686" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M504,686 L510,686 L510,714 L630,714" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M714,378 L720,378 L720,770 L672,770" fill="none" stroke="#64748b" stroke-width="1.2"
+                        marker-end="url(#arr)" />
+                    <path d="M840,798 L846,798 L846,826 L798,826" fill="none" stroke="#dc2626" stroke-width="1.8"
+                        marker-end="url(#arrc)" />
+                    <!-- Activity Bars -->
+                    <rect x="0" y="34" width="210" height="16" rx="2" fill="#dc2626" stroke="#b91c1c" stroke-width="0.8"
+                        class="bar" data-id="ST010" />
+                    <text x="215" y="47" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F A구역 슬래브
+                        콘크리트 양생</text>
+                    <rect x="168" y="62" width="126" height="16" rx="2" fill="#22c55e" stroke="#16a34a"
+                        stroke-width="0.8" class="bar" data-id="ST020" />
+                    <text x="299" y="75" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F A구역 슬래브
+                        거푸집해체</text>
+                    <rect x="0" y="90" width="168" height="16" rx="2" fill="#dc2626" stroke="#b91c1c" stroke-width="0.8"
+                        class="bar" data-id="ST030" />
+                    <text x="173" y="103" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 벽체
+                        거푸집설치</text>
+                    <rect x="84" y="118" width="168" height="16" rx="2" fill="#dc2626" stroke="#b91c1c"
+                        stroke-width="0.8" class="bar" data-id="ST040" />
+                    <text x="257" y="131" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 벽체
+                        철근배근</text>
+                    <rect x="210" y="146" width="84" height="16" rx="2" fill="#dc2626" stroke="#b91c1c"
+                        stroke-width="0.8" class="bar" data-id="ST050" />
+                    <text x="299" y="159" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 벽체
+                        콘크리트타설</text>
+                    <rect x="294" y="174" width="126" height="16" rx="2" fill="#ef4444" stroke="#b91c1c"
+                        stroke-width="0.8" class="bar" data-id="ST060" />
+                    <rect x="294" y="174" width="63" height="16" rx="2" fill="rgba(0,0,0,0.12)" />
+                    <text x="425" y="187" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 벽체
+                        콘크리트 양생</text>
+                    <rect x="294" y="202" width="84" height="16" rx="2" fill="#3b82f6" stroke="#2563eb"
+                        stroke-width="0.8" class="bar" data-id="ST070" />
+                    <rect x="294" y="202" width="42" height="16" rx="2" fill="rgba(0,0,0,0.12)" />
+                    <text x="383" y="215" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 슬래브
+                        먹매김</text>
+                    <rect x="336" y="230" width="168" height="16" rx="2" fill="#ef4444" stroke="#b91c1c"
+                        stroke-width="0.8" class="bar" data-id="ST080" />
+                    <rect x="336" y="230" width="84" height="16" rx="2" fill="rgba(0,0,0,0.12)" />
+                    <text x="509" y="243" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 슬래브
+                        거푸집설치</text>
+                    <rect x="420" y="258" width="168" height="16" rx="2" fill="#f87171" stroke="#b91c1c"
+                        stroke-width="0.8" class="bar" data-id="ST090" />
+                    <text x="593" y="271" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 슬래브
+                        철근배근</text>
+                    <rect x="588" y="286" width="84" height="16" rx="2" fill="#f87171" stroke="#b91c1c"
+                        stroke-width="0.8" class="bar" data-id="ST100" />
+                    <text x="677" y="299" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 슬래브
+                        콘크리트타설</text>
+                    <rect x="630" y="314" width="210" height="16" rx="2" fill="#f87171" stroke="#b91c1c"
+                        stroke-width="0.8" class="bar" data-id="ST110" />
+                    <text x="845" y="327" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 슬래브
+                        콘크리트 양생</text>
+                    <rect x="294" y="342" width="126" height="16" rx="2" fill="#3b82f6" stroke="#2563eb"
+                        stroke-width="0.8" class="bar" data-id="ST120" />
+                    <rect x="294" y="342" width="63" height="16" rx="2" fill="rgba(0,0,0,0.12)" />
+                    <text x="425" y="355" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F A구역 벽체
+                        거푸집해체</text>
+                    <rect x="588" y="370" width="126" height="16" rx="2" fill="#f97316" stroke="#ea580c"
+                        stroke-width="0.8" class="bar" data-id="ST130" />
+                    <text x="719" y="383" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 벽체
+                        거푸집해체</text>
+                    <rect x="42" y="426" width="210" height="16" rx="2" fill="#22c55e" stroke="#16a34a"
+                        stroke-width="0.8" class="bar" data-id="SC010" />
+                    <text x="257" y="439" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F 철골부재
+                        양중·설치</text>
+                    <rect x="294" y="454" width="168" height="16" rx="2" fill="#3b82f6" stroke="#2563eb"
+                        stroke-width="0.8" class="bar" data-id="SC020" />
+                    <rect x="294" y="454" width="84" height="16" rx="2" fill="rgba(0,0,0,0.12)" />
+                    <text x="467" y="467" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F 철골 고력볼트
+                        체결</text>
+                    <rect x="588" y="482" width="210" height="16" rx="2" fill="#f97316" stroke="#ea580c"
+                        stroke-width="0.8" class="bar" data-id="SC030" />
+                    <text x="803" y="495" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F 철골 내화피복
+                        도포</text>
+                    <rect x="126" y="538" width="126" height="16" rx="2" fill="#22c55e" stroke="#16a34a"
+                        stroke-width="0.8" class="bar" data-id="ME010" />
+                    <text x="257" y="551" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 벽체
+                        설비배관 매설</text>
+                    <rect x="420" y="566" width="126" height="16" rx="2" fill="#f97316" stroke="#ea580c"
+                        stroke-width="0.8" class="bar" data-id="ME020" />
+                    <text x="551" y="579" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 슬래브
+                        설비매립배관</text>
+                    <rect x="420" y="622" width="126" height="16" rx="2" fill="#f97316" stroke="#ea580c"
+                        stroke-width="0.8" class="bar" data-id="EL010" />
+                    <text x="551" y="635" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F B구역 슬래브
+                        전기배관 매설</text>
+                    <rect x="378" y="678" width="126" height="16" rx="2" fill="#f97316" stroke="#ea580c"
+                        stroke-width="0.8" class="bar" data-id="WP010" />
+                    <text x="509" y="691" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F 바닥 방수
+                        프라이머 도포</text>
+                    <rect x="630" y="706" width="210" height="16" rx="2" fill="#f97316" stroke="#ea580c"
+                        stroke-width="0.8" class="bar" data-id="WP020" />
+                    <text x="845" y="719" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F 바닥 시트방수
+                        시공</text>
+                    <rect x="672" y="762" width="168" height="16" rx="2" fill="#f97316" stroke="#ea580c"
+                        stroke-width="0.8" class="bar" data-id="EW010" />
+                    <text x="845" y="775" font-size="10" fill="#334155" font-weight="500" class="bar-label">B1F 지하층 되메우기
+                        준비</text>
+                    <rect x="672" y="790" width="168" height="16" rx="2" fill="#f87171" stroke="#b91c1c"
+                        stroke-width="0.8" class="bar" data-id="EW020" />
+                    <text x="845" y="803" font-size="10" fill="#334155" font-weight="500" class="bar-label">1F 1층기초
+                        버림콘크리트 타설</text>
+                    <rect x="798" y="818" width="84" height="16" rx="2" fill="#f87171" stroke="#b91c1c"
+                        stroke-width="0.8" class="bar" data-id="EW030" />
+                    <text x="887" y="831" font-size="10" fill="#334155" font-weight="500" class="bar-label">1F 1층기초
+                        먹매김</text>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const leftBody = document.getElementById('leftBody'), rightPanel = document.getElementById('rightPanel');
+        rightPanel.addEventListener('scroll', () => { leftBody.scrollTop = rightPanel.scrollTop; });
+        leftBody.addEventListener('scroll', () => { rightPanel.scrollTop = leftBody.scrollTop; });
+        document.querySelectorAll('.act-row').forEach(row => {
+            row.addEventListener('mouseenter', () => { const id = row.dataset.id; document.querySelectorAll(`.bar[data-id="${id}"]`).forEach(b => { b.style.filter = 'brightness(1.15)'; b.style.strokeWidth = '2'; }); });
+            row.addEventListener('mouseleave', () => { const id = row.dataset.id; document.querySelectorAll(`.bar[data-id="${id}"]`).forEach(b => { b.style.filter = ''; b.style.strokeWidth = '0.8'; }); });
+        });
+        function adjustSvgHeight() { const svg = document.getElementById('timelineSvg'); svg.style.height = '850px'; }
+        adjustSvgHeight(); window.addEventListener('resize', adjustSvgHeight);
+    </script>
+</body>
+
+</html>
