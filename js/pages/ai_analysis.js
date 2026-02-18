@@ -42,6 +42,30 @@ function renderAiAnalysisPage(container) {
     var chartInstance = null;
     var totalRows = DB.runScalar("SELECT COUNT(*) FROM evms");
 
+    // ── 대화 기록 유지 (SPA 네비게이션 시만) ─────────────────
+    // window 전역 변수로 저장 → 다른 메뉴 갔다 돌아와도 유지
+    // 새로고침(F5) 시에는 초기화됨
+    if (window._aiChatState) {
+        chatMessages = window._aiChatState.messages || [];
+        currentResult = window._aiChatState.result || null;
+    }
+
+    function saveChatState() {
+        window._aiChatState = {
+            messages: chatMessages,
+            result: currentResult
+        };
+    }
+
+    function clearChat() {
+        chatMessages = [];
+        currentResult = null;
+        window._aiChatState = null;
+        renderChatMessages();
+        renderWelcomeScreen();
+        updateTabBar();
+    }
+
     // ── 레이아웃 렌더링 ──────────────────────────────────────
     container.innerHTML = buildLayout();
     // 모달은 body에 직접 추가 (overflow:hidden에 잘리지 않도록)
@@ -50,7 +74,20 @@ function renderAiAnalysisPage(container) {
     modalDiv.innerHTML = buildApiKeyModal();
     document.body.appendChild(modalDiv);
     setupEventHandlers();
-    renderWelcomeScreen();
+
+    // 이전 대화가 있으면 대화 기록 + 마지막 결과 표시, 없으면 Welcome
+    if (chatMessages.length > 0) {
+        renderChatMessages();
+        if (currentResult) {
+            activeTab = 'summary';
+            updateTabBar();
+            renderCanvasContent();
+        } else {
+            renderWelcomeScreen();
+        }
+    } else {
+        renderWelcomeScreen();
+    }
     renderPresetChips();
 
     // ── 레이아웃 HTML ────────────────────────────────────────
@@ -66,6 +103,9 @@ function renderAiAnalysisPage(container) {
             '<span>전체 프로젝트</span>' +
             '<span class="ai-context-badge">' + AIEngine.formatNumber(totalRows) + '건</span>' +
             '</div>' +
+            '<button class="ai-settings-btn" id="ai-clear-chat" title="대화 초기화" style="margin-right:2px">' +
+            '<i class="fa-solid fa-trash-can"></i>' +
+            '</button>' +
             '<button class="ai-settings-btn" id="ai-settings-btn" title="Gemini API Key 설정">' +
             '<i class="fa-solid fa-key"></i>' +
             '</button>' +
@@ -260,12 +300,16 @@ function renderAiAnalysisPage(container) {
 
     function addChatMessage(role, content, extra) {
         chatMessages.push({ role: role, content: content, time: new Date(), extra: extra });
+        saveChatState();
         renderChatMessages();
     }
 
     function renderChatMessages() {
         var area = document.getElementById('ai-chat-messages');
         if (!area) return;
+
+        console.log('[AI Chat] Rendering messages, count:', chatMessages.length,
+            chatMessages.map(function (m) { return m.role + ':' + (m.content || '').substring(0, 20); }));
 
         var html = '';
         // Welcome MSG (always first, compact)
@@ -276,10 +320,16 @@ function renderAiAnalysisPage(container) {
             '</div>' +
             '</div>';
 
-        chatMessages.forEach(function (msg) {
+        var lastUserMsgId = null;
+        var lastUserQuestion = '';
+
+        chatMessages.forEach(function (msg, idx) {
             var timeStr = msg.time ? (msg.time.getHours() + ':' + String(msg.time.getMinutes()).padStart(2, '0')) : '';
             if (msg.role === 'user') {
-                html += '<div class="ai-msg ai-msg-user">' +
+                var msgId = 'ai-user-msg-' + idx;
+                lastUserMsgId = msgId;
+                lastUserQuestion = msg.content || '';
+                html += '<div class="ai-msg ai-msg-user" id="' + msgId + '">' +
                     '<div class="ai-msg-bubble">' +
                     '<span class="ai-msg-user-text">' + escapeHtml(msg.content) + '</span>' +
                     '<span class="ai-msg-time">' + timeStr + '</span>' +
@@ -287,9 +337,16 @@ function renderAiAnalysisPage(container) {
                     '<div class="ai-msg-avatar ai-msg-avatar-user"><i class="fa-solid fa-user"></i></div>' +
                     '</div>';
             } else {
+                // AI 응답 안에 사용자 질문 인용 포함
+                var quoteHtml = '';
+                if (lastUserQuestion && msg.extra && msg.extra.title) {
+                    quoteHtml = '<div class="ai-msg-quote"><i class="fa-solid fa-quote-left"></i> ' + escapeHtml(lastUserQuestion) + '</div>';
+                    lastUserQuestion = ''; // 한 번만 표시
+                }
                 html += '<div class="ai-msg ai-msg-ai">' +
                     '<div class="ai-msg-avatar"><i class="fa-solid fa-robot"></i></div>' +
                     '<div class="ai-msg-bubble">' +
+                    quoteHtml +
                     '<div class="ai-msg-title">' + (msg.extra && msg.extra.title ? msg.extra.title : '분석 결과') + '</div>' +
                     '<p>' + (msg.content || '').substring(0, 120) + (msg.content && msg.content.length > 120 ? '...' : '') + '</p>' +
                     (msg.extra && msg.extra.elapsed ? '<div class="ai-msg-meta"><i class="fa-solid fa-clock"></i> ' + msg.extra.elapsed + 'ms · ' + (msg.extra.rows || 0) + '건</div>' : '') +
@@ -299,16 +356,32 @@ function renderAiAnalysisPage(container) {
         });
 
         area.innerHTML = html;
-        area.scrollTop = area.scrollHeight;
+        // 마지막 사용자 메시지가 보이도록 스크롤
+        setTimeout(function () {
+            if (lastUserMsgId) {
+                var userEl = document.getElementById(lastUserMsgId);
+                if (userEl) {
+                    userEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    return;
+                }
+            }
+            area.scrollTop = area.scrollHeight;
+        }, 50);
     }
 
     // ── 메시지 전송 & 처리 ───────────────────────────────────
 
+    var isProcessing = false;
+
     async function sendMessage(text) {
         if (!text || !text.trim()) return;
+        if (isProcessing) return; // 중복 전송 방지
 
+        isProcessing = true;
         var input = document.getElementById('ai-input');
-        if (input) input.value = '';
+        var sendBtn = document.getElementById('ai-send-btn');
+        if (input) { input.value = ''; input.disabled = true; input.placeholder = '분석 중...'; }
+        if (sendBtn) { sendBtn.disabled = true; sendBtn.style.opacity = '0.5'; }
 
         // 사용자 메시지 추가
         addChatMessage('user', text.trim());
@@ -320,12 +393,22 @@ function renderAiAnalysisPage(container) {
         try {
             var response = await AIEngine.processQuery(text.trim());
             currentResult = response;
+            saveChatState();
 
             // AI 메시지 추가
             var summary = response.summary || '';
             if (response.apiError) {
                 summary += '\n⚠ API 오류: ' + response.apiError + '\n프리셋 모드로 전환되었습니다.';
                 console.warn('[AI] API Error detail:', response.apiError);
+            }
+            // 분석 모드 안내
+            if (response.queryType === 'hybrid' && response.analysis) {
+                summary += '\n\n🔬 하이브리드 분석 모드: 데이터 조회 + CM이론 기반 분석이 수행되었습니다.';
+            } else if (response.queryType === 'consulting' && response.analysis) {
+                summary += '\n\n👔 CM 컨설팅 모드: 전문 CM이론에 기반한 분석이 수행되었습니다.';
+            }
+            if (response.matchedAgenda) {
+                summary += '\n📋 관련 회의의제: ' + response.matchedAgenda;
             }
             addChatMessage('ai', summary, {
                 title: response.title,
@@ -341,6 +424,10 @@ function renderAiAnalysisPage(container) {
         } catch (err) {
             addChatMessage('ai', '오류가 발생했습니다: ' + err.message, { title: '처리 오류' });
             console.error('[AI Page] Error:', err);
+        } finally {
+            isProcessing = false;
+            if (input) { input.disabled = false; input.placeholder = '건설 데이터에 무엇이든 물어보세요...'; input.focus(); }
+            if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
         }
     }
 
@@ -388,12 +475,21 @@ function renderAiAnalysisPage(container) {
             '</div>';
 
         // KPI Cards
-        if (r.kpis && r.kpis.length > 0 && r.result && r.result.values.length > 0) {
+        if (r.kpis && r.kpis.length > 0) {
             html += '<div class="ai-kpi-row">';
             r.kpis.forEach(function (kpi) {
-                var val = r.result.values[0][kpi.col];
+                var val;
+                if (kpi.value != null) {
+                    val = kpi.value;  // 자동생성 KPI (직접 값)
+                } else if (kpi.col >= 0 && r.result && r.result.values.length > 0) {
+                    val = r.result.values[0][kpi.col];  // 결과 컬럼 참조
+                } else {
+                    return;  // 값 없으면 스킵
+                }
                 var formatted = kpi.unit === '원' ? AIEngine.formatCurrency(val) :
-                    kpi.unit === '%' ? (val + '%') : AIEngine.formatNumber(val);
+                    kpi.unit === '%' ? (val + '%') :
+                        kpi.unit === '건' ? AIEngine.formatNumber(val) + '건' :
+                            AIEngine.formatNumber(val);
                 if (!kpi.unit && typeof val === 'string') formatted = val;
                 html += '<div class="ai-kpi-card">' +
                     '<div class="ai-kpi-icon"><i class="fa-solid ' + (kpi.icon || 'fa-chart-simple') + '"></i></div>' +
@@ -414,6 +510,120 @@ function renderAiAnalysisPage(container) {
                 '</div>';
         }
 
+        // CM Analysis Cards (Stage ② — Enhanced Consultant Report)
+        if (r.analysis) {
+            // 매칭된 회의의제 배지
+            var agendaBadge = '';
+            if (r.matchedAgenda) {
+                agendaBadge = '<div class="ai-agenda-badge">' +
+                    '<i class="fa-solid fa-clipboard-list"></i> 관련 회의의제: <strong>' + escapeHtml(r.matchedAgenda) + '</strong>' +
+                    '</div>';
+            }
+
+            var queryTypeBadge = '';
+            if (r.queryType === 'hybrid') {
+                queryTypeBadge = '<span class="ai-query-badge ai-badge-hybrid"><i class="fa-solid fa-layer-group"></i> 하이브리드 분석</span>';
+            } else if (r.queryType === 'consulting') {
+                queryTypeBadge = '<span class="ai-query-badge ai-badge-consulting"><i class="fa-solid fa-user-tie"></i> CM 컨설팅</span>';
+            }
+
+            // 보고서 제목
+            var reportTitle = r.analysis.reportTitle || 'CM 전문 분석';
+
+            html += '<div class="ai-cm-analysis">' +
+                '<div class="ai-cm-header">' +
+                '<h4><i class="fa-solid fa-microscope"></i> ' + escapeHtml(reportTitle) + '</h4>' +
+                queryTypeBadge +
+                '</div>' +
+                agendaBadge;
+
+            // ① 현황 진단
+            if (r.analysis.situation) {
+                html += '<div class="ai-cm-card ai-cm-situation">' +
+                    '<div class="ai-cm-card-header"><i class="fa-solid fa-magnifying-glass-chart"></i> 1. 현황 진단 및 원인 분석</div>' +
+                    '<div class="ai-cm-card-body">' + formatAnalysisText(r.analysis.situation) + '</div>' +
+                    '</div>';
+            }
+
+            // ② 전략별 대책 (strategies 배열)
+            if (r.analysis.strategies && r.analysis.strategies.length > 0) {
+                html += '<div class="ai-cm-card ai-cm-strategies">' +
+                    '<div class="ai-cm-card-header"><i class="fa-solid fa-chess"></i> 2. 단계별 만회 대책 및 실행 방안</div>' +
+                    '<div class="ai-cm-card-body">';
+
+                r.analysis.strategies.forEach(function (s, idx) {
+                    html += '<div class="ai-strategy-item">' +
+                        '<div class="ai-strategy-title">' + escapeHtml(s.title || ('[전략 ' + (idx + 1) + ']')) + '</div>';
+
+                    if (s.target) {
+                        html += '<div class="ai-strategy-detail">' +
+                            '<span class="ai-detail-label"><i class="fa-solid fa-crosshairs"></i> 대상</span>' +
+                            '<span class="ai-detail-value">' + escapeHtml(s.target) + '</span></div>';
+                    }
+                    if (s.action) {
+                        html += '<div class="ai-strategy-detail">' +
+                            '<span class="ai-detail-label"><i class="fa-solid fa-wrench"></i> 실행 방안</span>' +
+                            '<span class="ai-detail-value">' + formatAnalysisText(s.action) + '</span></div>';
+                    }
+                    if (s.effect) {
+                        html += '<div class="ai-strategy-detail ai-detail-effect">' +
+                            '<span class="ai-detail-label"><i class="fa-solid fa-chart-line"></i> 기대 효과</span>' +
+                            '<span class="ai-detail-value">' + formatAnalysisText(s.effect) + '</span></div>';
+                    }
+                    if (s.cost) {
+                        html += '<div class="ai-strategy-detail ai-detail-cost">' +
+                            '<span class="ai-detail-label"><i class="fa-solid fa-coins"></i> 추가 비용</span>' +
+                            '<span class="ai-detail-value">' + formatAnalysisText(s.cost) + '</span></div>';
+                    }
+                    html += '</div>';
+                });
+
+                html += '</div></div>';
+            }
+
+            // ③ 비용-일정 트레이드오프
+            if (r.analysis.tradeoff) {
+                html += '<div class="ai-cm-card ai-cm-tradeoff">' +
+                    '<div class="ai-cm-card-header"><i class="fa-solid fa-scale-balanced"></i> 3. 비용-일정 트레이드오프 분석</div>' +
+                    '<div class="ai-cm-card-body">' + formatAnalysisText(r.analysis.tradeoff) + '</div>' +
+                    '</div>';
+            }
+
+            // ④ 최종 의사결정 제안
+            if (r.analysis.recommendation) {
+                html += '<div class="ai-cm-card ai-cm-recommendation">' +
+                    '<div class="ai-cm-card-header"><i class="fa-solid fa-gavel"></i> 4. 최종 의사결정 제안</div>' +
+                    '<div class="ai-cm-card-body">' + formatAnalysisText(r.analysis.recommendation) + '</div>' +
+                    '</div>';
+            }
+
+            // ⑤ 리스크
+            if (r.analysis.risk) {
+                html += '<div class="ai-cm-card ai-cm-risk">' +
+                    '<div class="ai-cm-card-header"><i class="fa-solid fa-triangle-exclamation"></i> 5. 리스크 경고</div>' +
+                    '<div class="ai-cm-card-body">' + formatAnalysisText(r.analysis.risk) + '</div>' +
+                    '</div>';
+            }
+
+            // ⑥ 시뮬레이션
+            if (r.analysis.simulation) {
+                html += '<div class="ai-cm-card ai-cm-simulation">' +
+                    '<div class="ai-cm-card-header"><i class="fa-solid fa-flask-vial"></i> 6. 시뮬레이션 결과</div>' +
+                    '<div class="ai-cm-card-body">' + formatAnalysisText(r.analysis.simulation) + '</div>' +
+                    '</div>';
+            }
+
+            // 하위 호환: 구형 theory 필드
+            if (r.analysis.theory && !r.analysis.strategies) {
+                html += '<div class="ai-cm-card ai-cm-theory">' +
+                    '<div class="ai-cm-card-header"><i class="fa-solid fa-book-open"></i> 이론 근거</div>' +
+                    '<div class="ai-cm-card-body">' + formatAnalysisText(r.analysis.theory) + '</div>' +
+                    '</div>';
+            }
+
+            html += '</div>';
+        }
+
         // Quick Data Preview (first 10 rows)
         if (r.result && r.result.values.length > 0) {
             html += '<div class="ai-summary-preview">' +
@@ -427,7 +637,7 @@ function renderAiAnalysisPage(container) {
 
         // SQL Display
         if (r.sql) {
-            html += '<details class="ai-sql-detail">' +
+            html += '<details class="ai-sql-detail" open>' +
                 '<summary><i class="fa-solid fa-code"></i> 실행된 SQL 쿼리</summary>' +
                 '<pre class="ai-sql-code">' + escapeHtml(r.sql) + '</pre>' +
                 '</details>';
@@ -584,7 +794,7 @@ function renderAiAnalysisPage(container) {
         var canvasEl = document.getElementById('ai-chart-canvas');
         if (!canvasEl) return;
 
-        var labelCol = config && config.labelColumn >= 0 ? config.labelColumn : 0;
+        var labelCol = config && config.labelColumn != null ? config.labelColumn : 0;
         var dataCols = config && config.dataColumns ? config.dataColumns : [1];
         var dataLabels = config && config.dataLabels ? config.dataLabels : result.columns.slice(1);
 
@@ -647,9 +857,12 @@ function renderAiAnalysisPage(container) {
                     tooltip: {
                         callbacks: {
                             label: function (ctx) {
-                                var val = ctx.parsed && ctx.parsed.y != null ? ctx.parsed.y : ctx.parsed;
+                                var val = ctx.raw;
+                                if (val == null && ctx.parsed) {
+                                    val = isHorizontal ? ctx.parsed.x : ctx.parsed.y;
+                                }
                                 if (typeof val === 'object') val = ctx.raw;
-                                return ctx.dataset.label + ': ' + AIEngine.formatNumber(val);
+                                return (ctx.dataset.label || '') + ': ' + AIEngine.formatNumber(val);
                             }
                         }
                     }
@@ -705,6 +918,15 @@ function renderAiAnalysisPage(container) {
             });
         }
 
+        // Clear chat button
+        var clearBtn = document.getElementById('ai-clear-chat');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                if (chatMessages.length === 0) return;
+                clearChat();
+            });
+        }
+
         // Tab switching
         document.querySelectorAll('.ai-tab').forEach(function (tab) {
             tab.addEventListener('click', function () {
@@ -750,6 +972,12 @@ function renderAiAnalysisPage(container) {
         function saveApiKey() {
             var key = keyInput ? keyInput.value.trim() : '';
             if (!key) { alert('API 키를 입력해주세요.'); return; }
+            // 관리자 비밀번호 체크
+            if (key === '0172') {
+                key = AIEngine.getAdminKey();
+                if (!key) { alert('관리자 키가 설정되지 않았습니다.'); return; }
+                console.log('[AI] Admin key activated');
+            }
             AIEngine.setApiKey(key);
             hideModal();
             console.log('[AI] API Key saved, length:', key.length);
@@ -779,5 +1007,19 @@ function renderAiAnalysisPage(container) {
     function escapeHtml(str) {
         if (!str) return '';
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // 분석 텍스트 포맷팅: escapeHtml + 줄바꿈 + **bold** 마크다운 처리
+    function formatAnalysisText(str) {
+        if (!str) return '';
+        var escaped = escapeHtml(String(str));
+        // \\n (이스케이프된 리터럴) → <br>
+        escaped = escaped.replace(/\\n/g, '<br>');
+        // 실제 줄바꿈 → <br>
+        escaped = escaped.replace(/\n/g, '<br>');
+        // **bold** → <strong>
+        escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        // ` → 불필요, 이미 이스케이프됨
+        return escaped;
     }
 }

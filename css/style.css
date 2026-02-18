@@ -1131,6 +1131,15 @@ body {
    AI Analysis Page — CUBE Commander Layout
    ============================================================ */
 
+/* ─── AI Page Active State ───────────────────────────────── */
+.content-wrapper.ai-page-active {
+    padding: 0 !important;
+    overflow: hidden !important;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 64px);
+}
+
 /* ─── Layout ─────────────────────────────────────────────── */
 .ai-layout {
     display: flex;
@@ -1317,6 +1326,24 @@ body {
 
 .ai-msg-bubble p:last-child {
     margin: 0;
+}
+
+.ai-msg-quote {
+    background: rgba(59, 130, 246, 0.08);
+    border-left: 3px solid var(--primary);
+    padding: 4px 8px;
+    margin-bottom: 6px;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.62rem;
+    color: var(--primary);
+    font-style: italic;
+    line-height: 1.4;
+}
+
+.ai-msg-quote i {
+    font-size: 0.5rem;
+    margin-right: 3px;
+    opacity: 0.6;
 }
 
 /* ─── Preset Chips ───────────────────────────────────────── */
@@ -1762,6 +1789,257 @@ body {
     line-height: 1.6;
     color: var(--text-primary);
 }
+
+/* ─── CM Analysis Section (Hybrid Mode) ─────────────────── */
+.ai-cm-analysis {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.04), rgba(59, 130, 246, 0.04));
+    border: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.ai-cm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.ai-cm-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ai-cm-header h4 i {
+    color: #8B5CF6;
+}
+
+.ai-query-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ai-badge-hybrid {
+    background: rgba(59, 130, 246, 0.12);
+    color: #3B82F6;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.ai-badge-consulting {
+    background: rgba(139, 92, 246, 0.12);
+    color: #8B5CF6;
+    border: 1px solid rgba(139, 92, 246, 0.25);
+}
+
+.ai-agenda-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.ai-agenda-badge i {
+    color: #F59E0B;
+}
+
+.ai-agenda-badge strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.ai-cm-card {
+    margin-bottom: 10px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid transparent;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ai-cm-card:last-child {
+    margin-bottom: 0;
+}
+
+.ai-cm-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.ai-cm-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.ai-cm-card-body {
+    padding: 10px 14px 14px;
+    font-size: 0.8rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+}
+
+/* Situation - Blue */
+.ai-cm-situation {
+    background: rgba(59, 130, 246, 0.04);
+    border-color: rgba(59, 130, 246, 0.15);
+}
+
+.ai-cm-situation .ai-cm-card-header {
+    color: #2563EB;
+    background: rgba(59, 130, 246, 0.08);
+}
+
+/* Theory - Purple */
+.ai-cm-theory {
+    background: rgba(139, 92, 246, 0.04);
+    border-color: rgba(139, 92, 246, 0.15);
+}
+
+.ai-cm-theory .ai-cm-card-header {
+    color: #7C3AED;
+    background: rgba(139, 92, 246, 0.08);
+}
+
+/* Recommendation - Green */
+.ai-cm-recommendation {
+    background: rgba(16, 185, 129, 0.04);
+    border-color: rgba(16, 185, 129, 0.15);
+}
+
+.ai-cm-recommendation .ai-cm-card-header {
+    color: #059669;
+    background: rgba(16, 185, 129, 0.08);
+}
+
+/* Risk - Red/Orange */
+.ai-cm-risk {
+    background: rgba(239, 68, 68, 0.04);
+    border-color: rgba(239, 68, 68, 0.15);
+}
+
+.ai-cm-risk .ai-cm-card-header {
+    color: #DC2626;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+/* Strategies - Teal */
+.ai-cm-strategies {
+    background: rgba(20, 184, 166, 0.04);
+    border-color: rgba(20, 184, 166, 0.15);
+}
+
+.ai-cm-strategies .ai-cm-card-header {
+    color: #0D9488;
+    background: rgba(20, 184, 166, 0.08);
+}
+
+/* Strategy Items */
+.ai-strategy-item {
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.6);
+    border-left: 4px solid #0D9488;
+    border: 1px solid rgba(20, 184, 166, 0.12);
+    border-left: 4px solid #0D9488;
+}
+
+.ai-strategy-item:last-child {
+    margin-bottom: 0;
+}
+
+.ai-strategy-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0D9488;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(20, 184, 166, 0.12);
+}
+
+.ai-strategy-detail {
+    display: flex;
+    gap: 10px;
+    padding: 5px 0;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.ai-strategy-detail:last-child {
+    border-bottom: none;
+}
+
+.ai-detail-label {
+    flex-shrink: 0;
+    width: 90px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+}
+
+.ai-detail-label i {
+    font-size: 0.7rem;
+    width: 14px;
+    text-align: center;
+}
+
+.ai-detail-value {
+    flex: 1;
+    color: var(--text-primary);
+}
+
+.ai-detail-effect .ai-detail-label {
+    color: #059669;
+}
+
+.ai-detail-cost .ai-detail-label {
+    color: #D97706;
+}
+
+/* Tradeoff - Orange */
+.ai-cm-tradeoff {
+    background: rgba(245, 158, 11, 0.04);
+    border-color: rgba(245, 158, 11, 0.15);
+}
+
+.ai-cm-tradeoff .ai-cm-card-header {
+    color: #D97706;
+    background: rgba(245, 158, 11, 0.08);
+}
+
+/* Simulation - Indigo */
+.ai-cm-simulation {
+    background: rgba(99, 102, 241, 0.04);
+    border-color: rgba(99, 102, 241, 0.15);
+}
+
+.ai-cm-simulation .ai-cm-card-header {
+    color: #4F46E5;
+    background: rgba(99, 102, 241, 0.08);
+}
+
 
 /* ─── Data Table ─────────────────────────────────────────── */
 .ai-table-wrapper {
@@ -2211,12 +2489,79 @@ body {
     box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
+.cube-control-divider {
+    width: 1px;
+    height: 36px;
+    background: var(--border);
+    margin: 0 4px;
+    align-self: flex-end;
+    margin-bottom: 8px;
+}
+
+.cube-filter-select {
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.cube-filter-select:focus {
+    border-color: #8B5CF6;
+}
+
+.cube-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(99, 102, 241, 0.12));
+    color: #7C3AED;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 8px;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
 .cube-result {
     background: var(--bg-card);
     border-radius: 12px;
     border: 1px solid var(--border);
     padding: 16px;
     min-height: 300px;
+}
+
+.cube-chart-area {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.cube-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.cube-chart-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cube-chart-title i {
+    color: var(--primary);
+}
+
+.cube-chart-container {
+    position: relative;
+    width: 100%;
+    height: 360px;
 }
 
 .cube-placeholder {
