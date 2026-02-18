@@ -19,7 +19,7 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link href="css/style.css?v=29" rel="stylesheet">
+    <link href="css/style.css?v=32" rel="stylesheet">
 </head>
 
 <body>
@@ -37,6 +37,20 @@
 
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
+
+            <div class="sidebar-cube-area" id="sidebar-cube-area">
+                <div class="cube-container">
+                    <div class="cube">
+                        <div class="front">WHO</div>
+                        <div class="back">WHEN</div>
+                        <div class="right">WHERE</div>
+                        <div class="left">WHAT</div>
+                        <div class="top">HOW</div>
+                        <div class="bottom">WHY</div>
+                    </div>
+                </div>
+                <div class="cube-label">AI Data Cube</div>
+            </div>
 
             <nav class="sidebar-nav">
                 <div class="nav-section-title">PMIS 메뉴</div>
@@ -66,10 +80,13 @@
                 <div class="nav-section-title"
                     style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">AI Intelligence</div>
                 <a href="#/ai" class="nav-link" data-section="ai">
-                    <i class="fa-solid fa-robot"></i><span>AI Analysis</span>
+                    <i class="fa-solid fa-robot"></i><span>Chat with AI</span>
                 </a>
                 <a href="#/cube" class="nav-link" data-section="cube">
                     <i class="fa-solid fa-cubes"></i><span>CUBE View</span>
+                </a>
+                <a href="#/report" class="nav-link" data-section="report">
+                    <i class="fa-solid fa-file-lines"></i><span>AI Report</span>
                 </a>
             </nav>
 
@@ -122,7 +139,8 @@
     <script src="js/pages/productivity.js?v=29"></script>
     <script src="js/ai_engine.js?v=29"></script>
     <script src="js/pages/ai_analysis.js?v=29"></script>
-    <script src="js/pages/cube_view.js?v=29"></script>
+    <script src="js/pages/cube_view.js?v=30"></script>
+    <script src="js/pages/ai_report.js?v=30"></script>
 
     <!-- Current date display -->
     <script>

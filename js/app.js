@@ -69,7 +69,8 @@
             '/evms': renderEvmsPage,
             '/productivity': renderProductivityPage,
             '/ai': renderAiAnalysisPage,
-            '/cube': renderCubeViewPage
+            '/cube': renderCubeViewPage,
+            '/report': renderAiReportPage
         };
 
         function handleRoute() {
@@ -89,9 +90,39 @@
                 }
                 updateActiveNav(hash);
                 // Update page title in global header
-                var pgNames = { '/overview': '프로젝트 개요', '/cost': '원가관리', '/schedule': '공정관리', '/quantity': '자재관리', '/organization': '조직관리', '/evms': '진도관리', '/productivity': '생산성관리', '/ai': 'AI Analysis', '/cube': 'CUBE View' };
+                var pgNames = { '/overview': '프로젝트 개요', '/cost': '원가관리', '/schedule': '공정관리', '/quantity': '자재관리', '/organization': '조직관리', '/evms': '진도관리', '/productivity': '생산성관리', '/ai': 'Chat with AI', '/cube': 'CUBE View', '/report': 'AI Report' };
                 var pgEl = document.getElementById('gh-page-name');
-                if (pgEl) pgEl.textContent = pgNames[hash] || '프로젝트 개요';
+                if (pgEl) {
+                    pgEl.textContent = pgNames[hash] || '프로젝트 개요';
+                    if (hash === '/ai') {
+                        // Naver gradient animation: left-to-right shimmer
+                        pgEl.style.background = 'linear-gradient(90deg, #03C75A, #1EC800, #00D95F, #03C75A)';
+                        pgEl.style.backgroundSize = '300% 100%';
+                        pgEl.style.webkitBackgroundClip = 'text';
+                        pgEl.style.backgroundClip = 'text';
+                        pgEl.style.webkitTextFillColor = 'transparent';
+                        pgEl.style.animation = 'naverShimmer 4s ease infinite';
+                        pgEl.style.fontWeight = '800';
+                        pgEl.style.fontSize = '0.9rem';
+                        // Inject keyframes if not already present
+                        if (!document.getElementById('naver-shimmer-style')) {
+                            var styleEl = document.createElement('style');
+                            styleEl.id = 'naver-shimmer-style';
+                            styleEl.textContent = '@keyframes naverShimmer { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }';
+                            document.head.appendChild(styleEl);
+                        }
+                    } else {
+                        // Reset styles for non-AI pages
+                        pgEl.style.background = '';
+                        pgEl.style.backgroundSize = '';
+                        pgEl.style.webkitBackgroundClip = '';
+                        pgEl.style.backgroundClip = '';
+                        pgEl.style.webkitTextFillColor = '';
+                        pgEl.style.animation = '';
+                        pgEl.style.fontWeight = '700';
+                        pgEl.style.fontSize = '0.82rem';
+                    }
+                }
                 contentArea.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
                 contentArea.style.opacity = '1';
                 contentArea.style.transform = 'translateY(0)';
@@ -165,6 +196,76 @@
                 });
             });
         }
+
+        // ── 리스크 알림 배지 (Risk Alert Badge) ──────────────
+        try {
+            if (DB && DB.isReady()) {
+                // SPI < 0.8인 고위험 작업 수
+                var highRiskCount = DB.runScalar("SELECT COUNT(*) FROM evms WHERE \"WHEN4_실행률(%)\" IS NOT NULL AND \"WHEN4_실행률(%)\" > 0 AND \"WHEN4_실행률(%)\" < 0.8 AND R10_합계_금액 > 10000000");
+                // 종료일 초과 작업 수
+                var overdueCount = DB.runScalar("SELECT COUNT(*) FROM evms WHERE WHEN2종료일 < date('now') AND \"WHEN4_실행률(%)\" < 1.0 AND \"WHEN4_실행률(%)\" IS NOT NULL");
+
+                // 진도관리 메뉴에 배지 추가
+                var evmsLink = document.querySelector('.nav-link[data-section="evms"]');
+                if (evmsLink && (highRiskCount > 0 || overdueCount > 0)) {
+                    var badgeNum = highRiskCount || overdueCount;
+                    var badgeColor = highRiskCount > 5 ? '#EF4444' : '#F59E0B';
+                    var badge = document.createElement('span');
+                    badge.className = 'risk-alert-badge';
+                    badge.textContent = badgeNum > 99 ? '99+' : badgeNum;
+                    badge.style.cssText = 'position:absolute;top:4px;right:6px;background:' + badgeColor + ';color:#fff;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:10px;min-width:16px;text-align:center;line-height:1.4;animation:badgePulse 2s ease-in-out infinite;';
+                    evmsLink.style.position = 'relative';
+                    evmsLink.appendChild(badge);
+                }
+
+                // AI Report 메뉴에도 배지 (리스크 히트맵 알림)
+                var reportLink = document.querySelector('.nav-link[data-section="report"]');
+                if (reportLink && highRiskCount > 0) {
+                    var rBadge = document.createElement('span');
+                    rBadge.className = 'risk-alert-badge';
+                    rBadge.textContent = '!';
+                    rBadge.style.cssText = 'position:absolute;top:4px;right:6px;background:#EF4444;color:#fff;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:10px;min-width:16px;text-align:center;line-height:1.4;animation:badgePulse 2s ease-in-out infinite;';
+                    reportLink.style.position = 'relative';
+                    reportLink.appendChild(rBadge);
+                }
+
+                // 배지 애니메이션 주입
+                if (!document.getElementById('badge-pulse-style')) {
+                    var bStyle = document.createElement('style');
+                    bStyle.id = 'badge-pulse-style';
+                    bStyle.textContent = '@keyframes badgePulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.15); } }';
+                    document.head.appendChild(bStyle);
+                }
+                console.log('[APP] Risk badges: highRisk=' + highRiskCount + ', overdue=' + overdueCount);
+            }
+        } catch (riskErr) {
+            console.warn('[APP] Risk badge error:', riskErr.message);
+        }
+
+        // ── 카운트업 유틸리티 (전역 함수) ─────────────────────
+        window.animateCountUp = function (element, targetValue, duration, suffix) {
+            if (!element) return;
+            duration = duration || 800;
+            suffix = suffix || '';
+            var startTime = null;
+            var startValue = 0;
+
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                var progress = Math.min((timestamp - startTime) / duration, 1);
+                // easeOutQuart
+                var eased = 1 - Math.pow(1 - progress, 4);
+                var current = Math.round(startValue + (targetValue - startValue) * eased);
+                element.textContent = current.toLocaleString() + suffix;
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    element.textContent = targetValue.toLocaleString() + suffix;
+                    element.classList.add('countup-done');
+                }
+            }
+            requestAnimationFrame(step);
+        };
 
         console.log('[APP] ✅ Dashboard ready!');
 

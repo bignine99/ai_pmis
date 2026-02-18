@@ -324,4 +324,141 @@ function getHierarchicalGantt(limit, dateWhere) {
 ---
 
 *최초 작성: 2026-02-16 21:52 KST*  
-*업데이트: 2026-02-17 10:40 KST*
+*업데이트: 2026-02-17 10:40 KST*  
+*업데이트: 2026-02-18 21:47 KST*
+
+---
+
+## 8. 2026-02-18 작업 상세
+
+### 8.1 AI 엔진 로직 개선 (`js/ai_engine.js`)
+
+#### 8.1.1 데이터 정렬 로직 수정 (smartFallback)
+- **문제**: 동(동별)/층(층별) 데이터가 금액순(DESC)으로 정렬되어 가독성 저하
+- **해결**: 차원 컬럼(동/층/월)과 속성 컬럼(업체/공종)을 구분하여 정렬 방식 분리
+  - **차원 컬럼**: `ORDER BY WHERE2_동, WHERE3_층` (자연 순서)
+  - **속성 컬럼**: `ORDER BY 합계금액 DESC` (금액순)
+- **복합 그룹핑**: `동별+층별` 복합 감지 추가 (`GROUP BY WHERE2_동, WHERE3_층`)
+
+#### 8.1.2 분기/월 날짜 범위 수정
+- **문제**: "이번 분기" 쿼리가 Q2(4~6월)로 잘못 매핑
+- **해결**: 동적 날짜 함수 연결
+  - `"이번 분기"` → `thisQuarterRange()` (현재: 2026 Q1 = 1~3월)
+  - `"다음 분기"` → `nextQuarterRange()`
+  - `"이번 달"` → `thisMonth()`
+  - `"다음 달"` → `nextMonth()`
+- **규칙 강화**: 기성액(진행률) 계산 시 반드시 `WHEN2종료일` 기준 필터링
+
+#### 8.1.3 System Prompt 업데이트
+- ★★ ORDER BY 규칙 ★★ 추가 (규칙 #20)
+- 분기/월 동적 날짜 매핑 추가 (규칙 #10, #11)
+- 기성액 계산 규칙 강화 (규칙 #12)
+
+### 8.2 AI 채팅 결과 저장 및 복원 (`js/pages/ai_analysis.js`)
+
+#### 8.2.1 결과 스냅샷 저장
+- AI 응답 시 `currentResult`를 `msg.extra.resultSnapshot`에 자동 저장
+- `saveChatState()`로 sessionStorage에 영속화
+
+#### 8.2.2 채팅 버블 클릭 → 결과 복원
+- AI 메시지 버블을 클릭하면 해당 시점의 결과(차트, 테이블, KPI)를 캔버스에 재로드
+- 선택된 메시지에 `.selected` 시각 강조
+- 클릭 힌트 텍스트 표시: "💡 클릭하면 이 결과를 다시 볼 수 있습니다"
+
+### 8.3 AI Report 인쇄 기능 (`js/pages/ai_report.js`)
+- 주간 보고서에 인쇄/PDF 버튼 추가
+- AI 자동 생성 코멘트 섹션 추가
+
+### 8.4 위험 알림 배지 (`js/app.js`)
+- 사이드바 네비게이션에 동적 위험 알림 배지 추가
+  - **진도관리(EVMS)**: SPI < 0.8 고위험 작업 수
+  - **AI Report**: 지연 작업 수
+- 배지 빨간색 펄스 애니메이션
+
+### 8.5 7가지 UI/UX 프리미엄 개선
+
+#### ① 사이드바 3D 회전 큐브
+- **초기**: 프로젝트 정보 헤더 (이름, 기간, 진행률 프로그레스바)
+- **최종**: 3D 회전 데이터 큐브 (WHO/WHEN/WHERE/WHAT/HOW/WHY)
+- 큐브 크기: 40×40px, 컨테이너 80px
+- 15초/1회전, hover 시 5초 가속
+- 배경: `var(--bg-sidebar)` → 라이트/다크 모두 자연스러운 테마 대응
+- 하단에 "AI Data Cube" 라벨 텍스트
+
+#### ② AI 채팅 타이핑 애니메이션
+- 메시지 전송 시 `•••` 블링킹 인디케이터 표시 (`showTypingIndicator()`)
+- 응답 수신 후 페이드아웃 제거 (`removeTypingIndicator()`)
+- 모든 메시지에 `messageAppear` 슬라이드업 애니메이션
+
+#### ③ Data Grid 테이블 개선
+- **Zebra striping**: 짝수행 배경색 (라이트:`rgba(59,130,246,0.02)`, 다크:`0.04`)
+- **Row hover**: 왼쪽 파란 보더 + 배경 하이라이트
+- **숫자 셀 분류**: `num-cell`(우측정렬, tabular-nums), `currency-cell`(파란색, 볼드)
+- **정렬 헤더**: hover 시 accent 색상 전환
+
+#### ④ AI Report 탭 인디케이터
+- CSS 클래스 `.rpt-tab-dot` / `.generated` 준비
+- 생성 완료: 초록색 + 글로우 / 미완료: 회색
+- 탭 전환 시 `fadeSlideUp` 애니메이션
+
+#### ⑤ KPI 카운트업 애니메이션
+- `window.animateCountUp(element, targetValue, duration, suffix)` 전역 함수
+- easeOutQuart 커브, 기본 800ms
+- 완료 후 `countupFlash` 효과 (accent → inherit 페이드)
+- 금액(원/억/만) 값은 포맷팅 복잡성으로 카운트업 제외
+
+#### ⑥ 차트 툴팁 커스터마이징
+- 다크 배경 (`rgba(15,23,42,0.95)`)
+- 확대 폰트, 색상 박스, 큰 패딩
+- `afterLabel` 콜백: **"전체 대비 XX%"** 비율 자동 계산 표시
+
+#### ⑦ 다크모드 정교화
+- AI 버블: `rgba(30,41,59,0.95)` + 서브틀 보더
+- 유저 메시지: 블루 그라데이션 (`#1e40af → #1d4ed8`)
+- 카드/KPI: `rgba(71,85,105,0.3)` 보더 + 미세 글로우
+- 테이블: 다크 헤더, 서브틀 보더
+- 큐브 영역: 테마 자동 대응
+
+### 8.6 변경된 파일 목록
+
+| 파일 | 변경 사항 |
+|------|----------|
+| `css/style.css` | +270줄 UI/UX 개선 CSS (큐브, 타이핑, 그리드, 탭, 카운트업, 툴팁, 다크모드) |
+| `index.html` | 사이드바 3D 큐브 HTML, CSS 버전 v32 |
+| `js/app.js` | 위험 알림 배지, `animateCountUp()` 전역 함수 |
+| `js/ai_engine.js` | ORDER BY 로직, 날짜 범위 수정, System Prompt 업데이트 |
+| `js/pages/ai_analysis.js` | 타이핑 인디케이터, 결과 스냅샷, 데이터 셀 클래스, KPI 카운트업, 차트 툴팁 |
+| `js/pages/ai_report.js` | 인쇄 버튼, AI 코멘트 섹션 |
+
+### 8.7 캐시 방지 업데이트
+- `index.html`: CSS `?v=32` (이전: v29 이하)
+
+---
+
+## 9. 프로젝트 구조 최신 (2026-02-18 기준)
+
+```
+260216_evms_dashborad/
+├── index.html              ← 메인 HTML (CSS v32, 사이드바 3D 큐브)
+├── css/style.css           ← 글로벌 스타일 ★ UI/UX 개선 CSS 270줄 추가
+├── js/
+│   ├── app.js              ← SPA 라우터 + 위험배지 + animateCountUp
+│   ├── ai_engine.js        ← AI SQL 엔진 ★ 정렬/날짜/프롬프트 수정
+│   ├── db_modules.js       ← SQLite 쿼리 모듈
+│   ├── components.js       ← (미사용, app.js에 통합됨)
+│   └── pages/
+│       ├── overview.js     ← 프로젝트 개요
+│       ├── cost.js         ← 원가관리 (2/16)
+│       ├── schedule.js     ← 공정관리 (2/17)
+│       ├── quantity.js     ← 물량관리
+│       ├── organization.js ← 조직관리
+│       ├── evms.js         ← 기성/진도 (EVMS)
+│       ├── productivity.js ← 생산성관리
+│       ├── ai_analysis.js  ← AI 분석 채팅 ★ 2/18 타이핑/카운트업/툴팁
+│       ├── ai_report.js    ← AI 리포트 ★ 2/18 인쇄/코멘트
+│       └── cube_view.js    ← 큐브 뷰 (피벗 테이블)
+├── .references/
+│   └── modification_processes.md ← 이 파일
+└── output/
+    └── project_db.sqlite   ← SQLite DB
+```

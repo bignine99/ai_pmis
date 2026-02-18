@@ -270,8 +270,13 @@
             '7. "올해" = SUBSTR(WHEN2종료일,1,4) = \'' + thisYear() + '\'\n' +
             '8. "오늘" = \'' + today() + '\'\n' +
             '9. "다음 달" = SUBSTR(WHEN1_시작일,1,7) = \'' + nextMonth() + '\'\n' +
-            '10. 기성액 = SUM(R10_합계_금액 * COALESCE("WHEN4_실행률(%)", 0))\n' +
-            '11. 현장 비속어/구어체 → 정식 용어 변환표:\n' +
+            '10. "이번 분기" = SUBSTR(WHEN2종료일,1,7) BETWEEN \'' + thisQuarterRange().start + '\' AND \'' + thisQuarterRange().end + '\'\n' +
+            '11. "다음 분기" = SUBSTR(WHEN2종료일,1,7) BETWEEN \'' + nextQuarterRange().start + '\' AND \'' + nextQuarterRange().end + '\'\n' +
+            '12. ★★ 기성액 계산 규칙 ★★:\n' +
+            '    기성은 종료일(WHEN2종료일) 기준으로 인정됩니다.\n' +
+            '    기성액 = SUM(R10_합계_금액 * COALESCE("WHEN4_실행률(%)", 0))\n' +
+            '    기성 조회 시 반드시 WHEN2종료일 기준으로 기간 필터링할 것.\n' +
+            '13. 현장 비속어/구어체 → 정식 용어 변환표:\n' +
             '  공구리/곤구리→콘크리트, 아시바→비계, 데모도→잡부, 노가다→노동, 빠루→지렛대\n' +
             '  삐까→마감, 나라시→고르기, 시마이→마무리, 구배→경사, 다루끼→각재\n' +
             '  야리까다→규준틀, 바라시→해체, 스미→먹줄, 와꾸→거푸집, 함바→현장식당\n' +
@@ -280,10 +285,25 @@
             '  포크레인→굴착기, 레미콘/생콘→레디믹스트 콘크리트, 뿌레카→유압브레이커\n' +
             '  앙카→앵커, 그라인다→연삭기, 빠이브→콘크리트 진동기, 스리브→관통슬리브\n' +
             '  타설→콘크리트 타설, 철근→봉강, 가라→가조립/임시\n' +
-            '12. "상반기"=1~6월, "하반기"=7~12월\n' +
-            '13. "물량"이라는 단어 → R2_수량의 합계\n' +
-            '14. "공사비/금액/비용"이라는 단어 → R10_합계_금액의 합계\n' +
-            '15. "재료비"만 따로 → R7_재료비_금액, "노무비"만 따로 → R8_노무비_금액\n\n' +
+            '13. "상반기"=1~6월, "하반기"=7~12월\n' +
+            '14. "물량" 또는 "수량" 질문 시 → 반드시 SUM(R2_수량) 컬럼을 SELECT에 포함할 것. (절대 COUNT(*)로 대체하지 말 것!)\n' +
+            '15. 질문에 특정 자재명(예: 철근, 콘크리트, 레미콘)이 포함되면, 반드시 WHERE HOW4_품명 LIKE \'%자재명%\' 조건을 추가할 것. (조건 누락 금지)\n' +
+            '    ★★★ 절대 HOW2_대공종이나 HOW3_작업명으로 자재를 검색하지 말 것! ★★★\n' +
+            '    HOW2_대공종 LIKE \'%콘크리트%\' → 콘크리트공사 산하 전체(철근, 거푸집 포함)가 다 나옴 = 오답!\n' +
+            '    올바른 검색: 콘크리트/레미콘/공구리 물량 → WHERE (HOW4_품명 LIKE \'%레미콘%\' OR HOW4_품명 LIKE \'%무근콘크리트%\')\n' +
+            '    올바른 검색: 철근 물량 → WHERE (HOW4_품명 LIKE \'%봉강%\' OR HOW4_품명 LIKE \'%철근%\')\n' +
+            '    올바른 검색: 거푸집 물량 → WHERE (HOW4_품명 LIKE \'%거푸집%\' OR HOW4_품명 LIKE \'%유로폼%\')\n' +
+            '15. "공사비/금액/비용"이라는 단어 → R10_합계_금액의 합계\n' +
+            '16. "재료비"만 따로 → R7_재료비_금액, "노무비"만 따로 → R8_노무비_금액\n' +
+            '17. "동별" 질문 시 → 반드시 GROUP BY WHERE2_동 사용. 특정 동을 지정하지 않으면 WHERE절에 동 필터(WHERE2_동 = ...)를 절대 넣지 말 것.\n' +
+            '18. "층별" 질문 시 → 반드시 GROUP BY WHERE3_층 사용. 특정 층을 지정하지 않으면 WHERE절에 층 필터(WHERE3_층 = ...)를 절대 넣지 말 것.\n' +
+            '19. 사용자가 동/층을 명시하지 않았는데 임의로 "본관동", "1층" 등을 조건에 추가하지 마시오. (전체 데이터 조회)\n' +
+            '20. ★★ ORDER BY 규칙 ★★:\n' +
+            '    - "동별" 또는 "층별" 그룹핑 → ORDER BY WHERE2_동, WHERE3_층 (차원 순서 정렬!)\n' +
+            '    - "동별/층별" 복합 그룹핑 → ORDER BY WHERE2_동, WHERE3_층\n' +
+            '    - "월별" 그룹핑 → ORDER BY 월 (시간순)\n' +
+            '    - "업체별", "공종별" 그룹핑 → ORDER BY 합계금액 DESC (금액순)\n' +
+            '    - 절대로 동/층/월 등 차원 데이터를 금액순(DESC)으로 정렬하지 말 것! 뒤죽박죽 섞여서 가독성이 떨어짐.\n\n' +
 
             '# DB 데이터 구조 가이드라인 (★★ 필수 참조 ★★)\n' +
             '이 DB는 건설 내역서의 도급내역을 CUBE 구조로 변환한 것입니다.\n\n' +
@@ -300,7 +320,8 @@
             '사용자 표현과 DB 품명이 다릅니다:\n' +
             '- 철근/이형철근 → DB 품명: "철근콘크리트용봉강(도급)" (동/층별 물량 존재)\n' +
             '- 이형철근(SD400) → DB 품명: "이형철근(SD400)" (00_공통에만, 관급자재비)\n' +
-            '- 콘크리트/레미콘 → "레미콘(도급)"(물량) 또는 "철근콘크리트 타설"(시공비)\n' +
+            '- 콘크리트/레미콘/공구리 → (1)"레미콘(도급)"(물량) (2)"무근콘크리트(도급)"(물량) (3)"철근콘크리트 타설"(시공비)\n' +
+            '  ★ 콘크리트 물량 검색: WHERE (HOW4_품명 LIKE \'%레미콘%\' OR HOW4_품명 LIKE \'%무근콘크리트%\')\n' +
             '- 거푸집 → "합판거푸집 설치 및 해체" 또는 "유로폼 설치 및 해체"\n' +
             '- 데크 → "GC DECKPLATE(도급)"(물량) 또는 "데크 설치비"(시공비)\n\n' +
 
@@ -314,7 +335,7 @@
             '- 이형철근 "총 물량과 자재비" → HOW4_품명 LIKE \'%이형철근%\'\n' +
             '- 이형철근 "동별/층별 물량" → HOW4_품명 LIKE \'%봉강%\' (도급 항목 조회)\n' +
             '- 철근 "동별 물량 비교" → HOW4_품명 LIKE \'%봉강%\' + GROUP BY WHERE2_동\n' +
-            '- 본관동 3층 "철근 물량" → WHERE2_동 LIKE \'%본관%\' AND WHERE3_층 LIKE \'%3%\' AND HOW4_품명 LIKE \'%봉강%\'\n\n' +
+            '- "본관동 3층 철근 물량"(특정 동/층 지정 시에만) → WHERE2_동 LIKE \'%본관%\' AND WHERE3_층 LIKE \'%3%\' AND HOW4_품명 LIKE \'%봉강%\'\n\n' +
 
             '## 규격(HOW5_규격) 특수 용어\n' +
             '- 하치장상차도: 공장 가공 후 현장 야적장까지 운반·도착 포함 조건\n' +
@@ -324,9 +345,15 @@
             '- (도급)/(관급): 발주처 직접 구매·지급 자재\n' +
             '- Type-2: 철근 가공 유형\n\n' +
 
-            '## WHERE2_동 = \'00_공통\'\n' +
             '특정 동에 배분되지 않은 공통 항목 (관급자재비, 토목, 조경 등)\n' +
-            '동별 집계 시 00_공통은 별도 취급 필요\n\n';
+            '동별 집계 시 00_공통은 별도 취급 필요\n\n' +
+
+            '# 대화 맥락 유지 (Context Management)\n' +
+            '사용자는 이전 질문에 이어지는 후속 질문을 자주 합니다. (예: "수량은?", "금액도 알려줘", "그중에서 본관동만 보여줘")\n' +
+            '이 경우 **반드시 이전 대화(History)의 SQL 쿼리를 참고하여** 조건을 추가하거나 컬럼을 변경해야 합니다.\n' +
+            '- 예: 이전 질문이 "공구리 물량은?"이고 후속 질문이 "금액은?"이라면 → "공구리 금액"을 조회하는 SQL 생성\n' +
+            '- 예: 이전 SQL에 "WHERE ... GROUP BY ..."가 있었다면, 후속 질문에서도 그 맥락(필터/그룹)을 유지할 것\n' +
+            '- 이전 맥락이 없는 새로운 주제의 질문이라면 새로운 SQL을 작성\n\n';
 
         // ── 5. 회의의제 매칭 컨텍스트 동적 추가 ──
         if (agendaContext) {
@@ -1108,7 +1135,16 @@
 
         // ── GROUP BY 축 감지 ──
         var groupCol = null, groupLabel = '';
-        if (q.indexOf('업체') >= 0 || q.indexOf('하도급') >= 0 || q.indexOf('협력사') >= 0) {
+        var isMultiGroup = false;
+        var groupCols = [];  // 복수 그룹핑용
+
+        // 동별 + 층별 복합 그룹핑 감지
+        if ((q.indexOf('동별') >= 0 || q.indexOf('동') >= 0) && (q.indexOf('층별') >= 0 || q.indexOf('층') >= 0)) {
+            groupCol = 'WHERE2_동, WHERE3_층';
+            groupLabel = '동_층';
+            isMultiGroup = true;
+            groupCols = ['WHERE2_동', 'WHERE3_층'];
+        } else if (q.indexOf('업체') >= 0 || q.indexOf('하도급') >= 0 || q.indexOf('협력사') >= 0) {
             groupCol = 'WHO1_하도급업체'; groupLabel = '업체';
         } else if (q.indexOf('공종') >= 0 || q.indexOf('공사') >= 0) {
             groupCol = 'HOW2_대공종'; groupLabel = '공종';
@@ -1128,7 +1164,21 @@
         var yearMatch = q.match(/(20\d{2})/);
         var yr = yearMatch ? yearMatch[1] : thisYear();
 
-        if (q.indexOf('전반기') >= 0 || q.indexOf('상반기') >= 0 || (q.indexOf('1월') >= 0 && q.indexOf('6월') >= 0)) {
+        if (q.indexOf('이번 분기') >= 0 || q.indexOf('금분기') >= 0) {
+            var tqr = thisQuarterRange();
+            dateWhere = "SUBSTR(WHEN2종료일,1,7) >= '" + tqr.start + "' AND SUBSTR(WHEN2종료일,1,7) <= '" + tqr.end + "'";
+            dateDesc = tqr.start + ' ~ ' + tqr.end + ' (이번 분기)';
+        } else if (q.indexOf('다음 분기') >= 0 || q.indexOf('차분기') >= 0) {
+            var nqr = nextQuarterRange();
+            dateWhere = "SUBSTR(WHEN2종료일,1,7) >= '" + nqr.start + "' AND SUBSTR(WHEN2종료일,1,7) <= '" + nqr.end + "'";
+            dateDesc = nqr.start + ' ~ ' + nqr.end + ' (다음 분기)';
+        } else if (q.indexOf('이번 달') >= 0 || q.indexOf('이달') >= 0 || q.indexOf('금월') >= 0) {
+            dateWhere = "SUBSTR(WHEN2종료일,1,7) = '" + thisMonth() + "'";
+            dateDesc = thisMonth() + ' (이번 달)';
+        } else if (q.indexOf('다음 달') >= 0 || q.indexOf('다음달') >= 0 || q.indexOf('내달') >= 0 || q.indexOf('차월') >= 0) {
+            dateWhere = "SUBSTR(WHEN2종료일,1,7) = '" + nextMonth() + "'";
+            dateDesc = nextMonth() + ' (다음 달)';
+        } else if (q.indexOf('전반기') >= 0 || q.indexOf('상반기') >= 0 || (q.indexOf('1월') >= 0 && q.indexOf('6월') >= 0)) {
             dateWhere = "SUBSTR(WHEN2종료일,1,7) >= '" + yr + "-01' AND SUBSTR(WHEN2종료일,1,7) <= '" + yr + "-06'";
             dateDesc = yr + '년 전반기(1~6월)';
         } else if (q.indexOf('후반기') >= 0 || q.indexOf('하반기') >= 0 || (q.indexOf('7월') >= 0 && q.indexOf('12월') >= 0)) {
@@ -1157,11 +1207,54 @@
             }
         }
 
+        // ── 자재/공종 키워드 감지 (★ 자재명은 HOW4_품명에서만, 공종명은 HOW2_대공종에서만 검색) ──
+        var keywordWhere = [];
+
+        // 1) 자재 키워드 → HOW4_품명에서만 검색 (가장 정확)
+        var materialKeywords = {
+            '레미콘': "HOW4_품명 LIKE '%레미콘%'",
+            '무근콘크리트': "HOW4_품명 LIKE '%무근콘크리트%'",
+            '콘크리트': "(HOW4_품명 LIKE '%레미콘%' OR HOW4_품명 LIKE '%무근콘크리트%' OR HOW4_품명 LIKE '%콘크리트 타설%')",
+            '공구리': "(HOW4_품명 LIKE '%레미콘%' OR HOW4_품명 LIKE '%무근콘크리트%' OR HOW4_품명 LIKE '%콘크리트 타설%')",
+            '철근': "(HOW4_품명 LIKE '%봉강%' OR HOW4_품명 LIKE '%철근%')",
+            '봉강': "HOW4_품명 LIKE '%봉강%'",
+            '거푸집': "(HOW4_품명 LIKE '%거푸집%' OR HOW4_품명 LIKE '%유로폼%')",
+            '데크': "HOW4_품명 LIKE '%DECK%'",
+            '유리': "HOW4_품명 LIKE '%유리%'",
+            '타일': "HOW4_품명 LIKE '%타일%'",
+            '창호': "HOW4_품명 LIKE '%창호%'",
+            '도장': "HOW4_품명 LIKE '%도장%'",
+            '미장': "HOW4_품명 LIKE '%미장%'",
+            '방수': "HOW4_품명 LIKE '%방수%'"
+        };
+
+        // 2) 공종 키워드 → HOW2_대공종에서 검색
+        var workTypeKeywords = ['골조', '토목', '가설', '전기', '설비', '소방', '통신', '조경', '수장', '금속', '석공사'];
+
+        // 자재 키워드 매칭
+        Object.keys(materialKeywords).forEach(function (kw) {
+            if (q.indexOf(kw) >= 0) {
+                keywordWhere.push(materialKeywords[kw]);
+            }
+        });
+
+        // 공종 키워드 매칭 (자재 키워드에 해당 안 될 때만)
+        if (keywordWhere.length === 0) {
+            workTypeKeywords.forEach(function (kw) {
+                if (q.indexOf(kw) >= 0) {
+                    keywordWhere.push("HOW2_대공종 LIKE '%" + kw + "%'");
+                }
+            });
+        }
+
         // ── 집계 함수 감지 ──
         var measureExpr = 'SUM(R10_합계_금액)';
         var measureLabel = '합계금액';
         var measureUnit = '원';
-        if (q.indexOf('재료비') >= 0 || q.indexOf('자재비') >= 0) {
+
+        if (q.indexOf('물량') >= 0 || q.indexOf('수량') >= 0) {
+            measureExpr = 'SUM(R2_수량)'; measureLabel = '총물량'; measureUnit = '';
+        } else if (q.indexOf('재료비') >= 0 || q.indexOf('자재비') >= 0) {
             measureExpr = 'SUM(R7_재료비_금액)'; measureLabel = '재료비';
         } else if (q.indexOf('노무비') >= 0 || q.indexOf('인건비') >= 0) {
             measureExpr = 'SUM(R8_노무비_금액)'; measureLabel = '노무비';
@@ -1173,27 +1266,57 @@
 
         // ── SQL 조립 ──
         var whereClauses = [];
-        if (groupCol.indexOf('SUBSTR') < 0) {
+        if (isMultiGroup) {
+            // 복수 그룹핑: 각 컬럼에 IS NOT NULL 적용
+            groupCols.forEach(function (col) {
+                whereClauses.push(col + " IS NOT NULL AND " + col + " != ''");
+            });
+        } else if (groupCol.indexOf('SUBSTR') < 0) {
             whereClauses.push(groupCol + " IS NOT NULL AND " + groupCol + " != ''");
         }
         if (dateWhere) whereClauses.push(dateWhere);
+        if (keywordWhere.length > 0) whereClauses.push(keywordWhere.join(' AND '));
+
         var whereStr = whereClauses.length > 0 ? ' WHERE ' + whereClauses.join(' AND ') : '';
 
-        var sql = 'SELECT ' + groupCol + ' AS ' + groupLabel + ', COUNT(*) AS 작업수, ' + measureExpr + ' AS ' + measureLabel +
+        // SELECT 컬럼 구성
+        var selectCols;
+        if (isMultiGroup) {
+            selectCols = groupCols.join(', ') + ', COUNT(*) AS 작업수, ' + measureExpr + ' AS ' + measureLabel;
+        } else {
+            selectCols = groupCol + ' AS ' + groupLabel + ', COUNT(*) AS 작업수, ' + measureExpr + ' AS ' + measureLabel;
+        }
+
+        // ORDER BY: 차원 컬럼(동/층/월)은 차원 순서로, 업체/공종은 금액 내림차순
+        var orderBy;
+        var isDimensional = (groupCol.indexOf('WHERE2_동') >= 0 || groupCol.indexOf('WHERE3_층') >= 0 || groupCol.indexOf('SUBSTR') >= 0);
+        if (isDimensional) {
+            orderBy = groupCol;  // 동, 층, 월 순서대로
+        } else {
+            orderBy = measureLabel + ' DESC';  // 업체/공종은 금액순
+        }
+
+        var sql = 'SELECT ' + selectCols +
             ' FROM evms' + whereStr +
             ' GROUP BY ' + groupCol +
-            ' ORDER BY ' + measureLabel + ' DESC LIMIT 20';
+            ' ORDER BY ' + orderBy + ' LIMIT 50';
 
         var titleParts = [];
         if (dateDesc) titleParts.push(dateDesc);
-        titleParts.push(groupLabel + '별 ' + measureLabel + ' 현황');
+        if (isMultiGroup) {
+            titleParts.push('동별/층별 ' + measureLabel + ' 현황');
+        } else {
+            titleParts.push(groupLabel + '별 ' + measureLabel + ' 현황');
+        }
+
+        var sortDesc = isDimensional ? '동/층/월 순서로 정렬되어 있습니다.' : '금액이 큰 순서로 정렬되어 있습니다.';
 
         return {
             sql: sql,
             title: titleParts.join(' '),
-            summary: (dateDesc ? dateDesc + ' 기간 동안 ' : '') + groupLabel + '별로 ' + measureLabel + '을 집계한 결과입니다. 금액이 큰 순서로 정렬되어 있습니다.',
+            summary: (dateDesc ? dateDesc + ' 기간 동안 ' : '') + (isMultiGroup ? '동별/층별로 ' : groupLabel + '별로 ') + measureLabel + '을 집계한 결과입니다. ' + sortDesc,
             chartType: 'horizontalBar',
-            chartConfig: { labelColumn: 0, dataColumns: [2], dataLabels: [measureLabel] },
+            chartConfig: { labelColumn: 0, dataColumns: [isMultiGroup ? 3 : 2], dataLabels: [measureLabel] },
             kpis: [],
             isPreset: false,
             isSmart: true

@@ -103,6 +103,15 @@ function renderAiAnalysisPage(container) {
             '<span>전체 프로젝트</span>' +
             '<span class="ai-context-badge">' + AIEngine.formatNumber(totalRows) + '건</span>' +
             '</div>' +
+            '<button class="ai-settings-btn" id="ai-export-chat" title="대화 내보내기 (텍스트)" style="margin-right:2px">' +
+            '<i class="fa-solid fa-file-export"></i>' +
+            '</button>' +
+            '<button class="ai-settings-btn" id="ai-save-chat" title="대화 저장 (로컬)" style="margin-right:2px">' +
+            '<i class="fa-solid fa-floppy-disk"></i>' +
+            '</button>' +
+            '<button class="ai-settings-btn" id="ai-load-chat" title="저장된 대화 불러오기" style="margin-right:2px">' +
+            '<i class="fa-solid fa-folder-open"></i>' +
+            '</button>' +
             '<button class="ai-settings-btn" id="ai-clear-chat" title="대화 초기화" style="margin-right:2px">' +
             '<i class="fa-solid fa-trash-can"></i>' +
             '</button>' +
@@ -299,7 +308,12 @@ function renderAiAnalysisPage(container) {
     // ── 채팅 메시지 관리 ─────────────────────────────────────
 
     function addChatMessage(role, content, extra) {
-        chatMessages.push({ role: role, content: content, time: new Date(), extra: extra });
+        var msg = { role: role, content: content, time: new Date(), extra: extra || {} };
+        // AI 응답에 해당 result 저장 (이전 대화 클릭 시 복원용)
+        if (role === 'ai' && currentResult) {
+            msg.extra.resultSnapshot = currentResult;
+        }
+        chatMessages.push(msg);
         saveChatState();
         renderChatMessages();
     }
@@ -343,19 +357,56 @@ function renderAiAnalysisPage(container) {
                     quoteHtml = '<div class="ai-msg-quote"><i class="fa-solid fa-quote-left"></i> ' + escapeHtml(lastUserQuestion) + '</div>';
                     lastUserQuestion = ''; // 한 번만 표시
                 }
+                var hasResult = msg.extra && msg.extra.resultSnapshot;
+                var clickStyle = hasResult ? ' style="cursor:pointer;transition:all 0.2s"' : '';
+                var clickHint = hasResult ? '<div class="ai-msg-click-hint"><i class="fa-solid fa-arrow-right"></i> 클릭하여 결과 보기</div>' : '';
                 html += '<div class="ai-msg ai-msg-ai">' +
                     '<div class="ai-msg-avatar"><i class="fa-solid fa-robot"></i></div>' +
-                    '<div class="ai-msg-bubble">' +
+                    '<div class="ai-msg-bubble ai-msg-clickable" data-msg-idx="' + idx + '"' + clickStyle + '>' +
                     quoteHtml +
                     '<div class="ai-msg-title">' + (msg.extra && msg.extra.title ? msg.extra.title : '분석 결과') + '</div>' +
                     '<p>' + (msg.content || '').substring(0, 120) + (msg.content && msg.content.length > 120 ? '...' : '') + '</p>' +
                     (msg.extra && msg.extra.elapsed ? '<div class="ai-msg-meta"><i class="fa-solid fa-clock"></i> ' + msg.extra.elapsed + 'ms · ' + (msg.extra.rows || 0) + '건</div>' : '') +
+                    clickHint +
                     '</div>' +
                     '</div>';
             }
         });
 
         area.innerHTML = html;
+
+        // AI 메시지 클릭 → 해당 결과를 우측 캔버스에 표시
+        area.querySelectorAll('.ai-msg-clickable[data-msg-idx]').forEach(function (bubble) {
+            bubble.addEventListener('click', function () {
+                var msgIdx = parseInt(bubble.getAttribute('data-msg-idx'));
+                var msg = chatMessages[msgIdx];
+                if (msg && msg.extra && msg.extra.resultSnapshot) {
+                    // 현재 result를 해당 메시지의 스냅샷으로 교체
+                    currentResult = msg.extra.resultSnapshot;
+                    activeTab = 'summary';
+                    updateTabBar();
+                    renderCanvasContent();
+                    // 클릭된 메시지 하이라이트
+                    area.querySelectorAll('.ai-msg-bubble').forEach(function (b) { b.classList.remove('ai-msg-selected'); });
+                    bubble.classList.add('ai-msg-selected');
+                }
+            });
+            // 호버 효과
+            bubble.addEventListener('mouseenter', function () {
+                if (bubble.getAttribute('data-msg-idx')) {
+                    var msg = chatMessages[parseInt(bubble.getAttribute('data-msg-idx'))];
+                    if (msg && msg.extra && msg.extra.resultSnapshot) {
+                        bubble.style.borderColor = 'var(--primary)';
+                        bubble.style.boxShadow = '0 2px 8px rgba(59,130,246,0.15)';
+                    }
+                }
+            });
+            bubble.addEventListener('mouseleave', function () {
+                bubble.style.borderColor = '';
+                bubble.style.boxShadow = '';
+            });
+        });
+
         // 마지막 사용자 메시지가 보이도록 스크롤
         setTimeout(function () {
             if (lastUserMsgId) {
@@ -367,6 +418,35 @@ function renderAiAnalysisPage(container) {
             }
             area.scrollTop = area.scrollHeight;
         }, 50);
+    }
+
+    // ── 타이핑 인디케이터 ────────────────────────────────────
+
+    function showTypingIndicator() {
+        var area = document.getElementById('ai-chat-messages');
+        if (!area) return;
+        // 이미 있으면 중복 방지
+        if (area.querySelector('.ai-msg-typing')) return;
+        var typingHtml = '<div class="ai-msg ai-msg-ai ai-msg-typing">' +
+            '<div class="ai-msg-avatar"><i class="fa-solid fa-robot"></i></div>' +
+            '<div class="ai-msg-bubble">' +
+            '<div class="ai-typing-indicator">' +
+            '<div class="dot"></div><div class="dot"></div><div class="dot"></div>' +
+            '</div></div></div>';
+        area.insertAdjacentHTML('beforeend', typingHtml);
+        area.scrollTop = area.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+        var area = document.getElementById('ai-chat-messages');
+        if (!area) return;
+        var typing = area.querySelector('.ai-msg-typing');
+        if (typing) {
+            typing.style.opacity = '0';
+            typing.style.transform = 'scale(0.95)';
+            typing.style.transition = 'all 0.2s ease';
+            setTimeout(function () { typing.remove(); }, 200);
+        }
     }
 
     // ── 메시지 전송 & 처리 ───────────────────────────────────
@@ -385,6 +465,9 @@ function renderAiAnalysisPage(container) {
 
         // 사용자 메시지 추가
         addChatMessage('user', text.trim());
+
+        // 타이핑 인디케이터 표시
+        showTypingIndicator();
 
         // 로딩 표시
         showCanvasLoading();
@@ -410,6 +493,7 @@ function renderAiAnalysisPage(container) {
             if (response.matchedAgenda) {
                 summary += '\n📋 관련 회의의제: ' + response.matchedAgenda;
             }
+            removeTypingIndicator();
             addChatMessage('ai', summary, {
                 title: response.title,
                 elapsed: response.elapsed,
@@ -422,6 +506,7 @@ function renderAiAnalysisPage(container) {
             renderCanvasContent();
 
         } catch (err) {
+            removeTypingIndicator();
             addChatMessage('ai', '오류가 발생했습니다: ' + err.message, { title: '처리 오류' });
             console.error('[AI Page] Error:', err);
         } finally {
@@ -491,11 +576,12 @@ function renderAiAnalysisPage(container) {
                         kpi.unit === '건' ? AIEngine.formatNumber(val) + '건' :
                             AIEngine.formatNumber(val);
                 if (!kpi.unit && typeof val === 'string') formatted = val;
+                var countupAttr = (typeof val === 'number') ? ' data-countup="' + val + '"' : '';
                 html += '<div class="ai-kpi-card">' +
                     '<div class="ai-kpi-icon"><i class="fa-solid ' + (kpi.icon || 'fa-chart-simple') + '"></i></div>' +
                     '<div class="ai-kpi-info">' +
                     '<div class="ai-kpi-label">' + kpi.label + '</div>' +
-                    '<div class="ai-kpi-value">' + formatted + '</div>' +
+                    '<div class="ai-kpi-value countup-value"' + countupAttr + '>' + formatted + '</div>' +
                     '</div>' +
                     '</div>';
             });
@@ -645,6 +731,26 @@ function renderAiAnalysisPage(container) {
 
         html += '</div>';
         canvas.innerHTML = html;
+
+        // KPI 카운트업 애니메이션 실행
+        if (window.animateCountUp) {
+            canvas.querySelectorAll('.countup-value[data-countup]').forEach(function (el) {
+                var target = parseFloat(el.getAttribute('data-countup'));
+                if (!isNaN(target) && target > 0) {
+                    var suffix = '';
+                    var displayText = el.textContent;
+                    // 단위 추출
+                    if (displayText.indexOf('원') >= 0 || displayText.indexOf('억') >= 0 || displayText.indexOf('만') >= 0) {
+                        // 금액은 포맷팅된 최종 값을 직접 설정 (카운트업 어려움)
+                        return;
+                    }
+                    if (displayText.match(/[건%개EA]/)) {
+                        suffix = displayText.replace(/[0-9,.]/g, '').trim();
+                    }
+                    window.animateCountUp(el, Math.round(target), 900, suffix);
+                }
+            });
+        }
     }
 
     // ── Data Grid 탭 ─────────────────────────────────────────
@@ -722,23 +828,27 @@ function renderAiAnalysisPage(container) {
             }
         });
         html += '</tr></thead><tbody>';
-        rows.forEach(function (row) {
+        rows.forEach(function (row, ri) {
             html += '<tr>';
             row.forEach(function (cell, ci) {
                 var val = cell;
+                var cellClass = '';
                 if (typeof cell === 'number') {
                     // 금액 컬럼 자동 포맷팅
                     var colName = cols[ci] || '';
                     if (colName.indexOf('금') >= 0 || colName.indexOf('비') >= 0 || colName.indexOf('액') >= 0 || colName.indexOf('원가') >= 0 || colName.indexOf('예산') >= 0) {
                         val = AIEngine.formatCurrency(cell);
+                        cellClass = 'currency-cell';
                     } else if (colName.indexOf('률') >= 0 || colName.indexOf('%') >= 0) {
                         val = (cell * 100).toFixed(1) + '%';
+                        cellClass = 'num-cell';
                     } else {
                         val = AIEngine.formatNumber(cell);
+                        cellClass = 'num-cell';
                     }
                 }
                 if (val == null) val = '-';
-                html += '<td>' + escapeHtml(String(val)) + '</td>';
+                html += '<td' + (cellClass ? ' class="' + cellClass + '"' : '') + '>' + escapeHtml(String(val)) + '</td>';
             });
             html += '</tr>';
         });
@@ -855,6 +965,13 @@ function renderAiAnalysisPage(container) {
                     legend: { display: datasets.length > 1 || type === 'pie' || type === 'doughnut', labels: { color: 'var(--text-primary)', font: { size: 11 } } },
                     title: { display: true, text: title || '', color: 'var(--text-primary)', font: { size: 14, weight: 700 } },
                     tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleFont: { size: 12, weight: 700 },
+                        bodyFont: { size: 11 },
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        boxPadding: 4,
                         callbacks: {
                             label: function (ctx) {
                                 var val = ctx.raw;
@@ -862,7 +979,23 @@ function renderAiAnalysisPage(container) {
                                     val = isHorizontal ? ctx.parsed.x : ctx.parsed.y;
                                 }
                                 if (typeof val === 'object') val = ctx.raw;
-                                return (ctx.dataset.label || '') + ': ' + AIEngine.formatNumber(val);
+                                var formatted = AIEngine.formatNumber(val);
+                                var prefix = (ctx.dataset.label || '') + ': ';
+                                return prefix + formatted;
+                            },
+                            afterLabel: function (ctx) {
+                                // 전체 대비 % 표시
+                                var val = ctx.raw;
+                                if (val == null && ctx.parsed) {
+                                    val = isHorizontal ? ctx.parsed.x : ctx.parsed.y;
+                                }
+                                if (typeof val !== 'number') return '';
+                                var total = ctx.dataset.data.reduce(function (sum, v) { return sum + (v || 0); }, 0);
+                                if (total > 0) {
+                                    var pct = ((val / total) * 100).toFixed(1);
+                                    return '전체 대비 ' + pct + '%';
+                                }
+                                return '';
                             }
                         }
                     }
@@ -924,6 +1057,80 @@ function renderAiAnalysisPage(container) {
             clearBtn.addEventListener('click', function () {
                 if (chatMessages.length === 0) return;
                 clearChat();
+            });
+        }
+
+        // Export chat as text file
+        var exportBtn = document.getElementById('ai-export-chat');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', function () {
+                if (chatMessages.length === 0) { alert('내보낼 대화가 없습니다.'); return; }
+                var lines = [];
+                lines.push('=== CUBE-AI 대화 기록 ===');
+                lines.push('날짜: ' + new Date().toLocaleString('ko-KR'));
+                lines.push('프로젝트: 인천소방학교 이전 신축공사');
+                lines.push('');
+                chatMessages.forEach(function (msg) {
+                    var prefix = msg.role === 'user' ? '👤 사용자' : '🤖 AI';
+                    lines.push('[' + prefix + '] ' + (msg.title ? msg.title + ': ' : '') + msg.text);
+                    if (msg.sql) lines.push('   SQL: ' + msg.sql);
+                    lines.push('');
+                });
+                var blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'CUBE-AI_Chat_' + new Date().toISOString().slice(0, 10) + '.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        // Save chat to LocalStorage
+        var saveBtn = document.getElementById('ai-save-chat');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                if (chatMessages.length === 0) { alert('저장할 대화가 없습니다.'); return; }
+                var saveData = {
+                    timestamp: new Date().toISOString(),
+                    messages: chatMessages,
+                    result: currentResult
+                };
+                // Get existing saves
+                var saves = JSON.parse(localStorage.getItem('cubeai_chat_saves') || '[]');
+                saves.unshift(saveData);
+                if (saves.length > 10) saves = saves.slice(0, 10); // max 10 saves
+                localStorage.setItem('cubeai_chat_saves', JSON.stringify(saves));
+                alert('✅ 대화가 저장되었습니다. (' + saves.length + '개 보관 중)');
+            });
+        }
+
+        // Load chat from LocalStorage
+        var loadBtn = document.getElementById('ai-load-chat');
+        if (loadBtn) {
+            loadBtn.addEventListener('click', function () {
+                var saves = JSON.parse(localStorage.getItem('cubeai_chat_saves') || '[]');
+                if (saves.length === 0) { alert('저장된 대화가 없습니다.'); return; }
+                var options = saves.map(function (s, i) {
+                    var d = new Date(s.timestamp);
+                    var label = d.toLocaleString('ko-KR') + ' (' + s.messages.length + '개 메시지)';
+                    return (i + 1) + '. ' + label;
+                });
+                var choice = prompt('불러올 대화를 선택하세요:\n\n' + options.join('\n') + '\n\n번호를 입력하세요:');
+                if (!choice) return;
+                var idx = parseInt(choice) - 1;
+                if (idx < 0 || idx >= saves.length) { alert('잘못된 번호입니다.'); return; }
+                chatMessages = saves[idx].messages || [];
+                currentResult = saves[idx].result || null;
+                saveChatState();
+                renderChatMessages();
+                if (currentResult) {
+                    activeTab = 'summary';
+                    updateTabBar();
+                    renderCanvasContent();
+                } else {
+                    renderWelcomeScreen();
+                }
             });
         }
 
