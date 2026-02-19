@@ -15,4 +15,3 @@ desktop.ini
 
 # Large binary outputs
 output/project_db_v2.sqlite
-output/project_db_v3.sqlite

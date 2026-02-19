@@ -462,3 +462,186 @@ function getHierarchicalGantt(limit, dateWhere) {
 └── output/
     └── project_db.sqlite   ← SQLite DB
 ```
+
+---
+
+*최초 작성: 2026-02-16 21:52 KST*  
+*업데이트: 2026-02-17 10:40 KST*  
+*업데이트: 2026-02-18 21:47 KST*  
+*업데이트: 2026-02-19 19:07 KST*
+
+---
+
+## 10. 2026-02-19 작업 상세
+
+### 10.1 랜딩 페이지 전면 개편
+
+#### 10.1.1 동적 배경 애니메이션 (`js/landing_bg.js` — **신규 파일**)
+
+회사 홈페이지([ninetynine99.co.kr](https://www.ninetynine99.co.kr/))의 시각 기술을 분석하여 3가지를 결합 적용:
+
+| 기술 | 설명 |
+|------|------|
+| **Data Flow** | 파티클 간 반투명 연결선 (120px 이내) |
+| **Wave Pulse** | 사인파 곡선 3줄 (굵은/보통/얇은 차별화) |
+| **Floating Particles** | 70개 브랜드 컬러 파티클 (맥동 효과) |
+
+**파라미터 최종값:**
+- 파티클: 70개, 크기 0.5~10px, 속도 vx 1.1 / vy 0.85
+- 웨이브: 3줄, 굵기 3.5px / 2.0px / 0.7px, 속도 0.006~0.014
+- 연결선: 거리 120px 이내, alpha 0.2, lineWidth 0.8
+- 캔버스 opacity: 0.85
+
+**성능 최적화:**
+- 랜딩 페이지 숨김 시 `cancelAnimationFrame`으로 자동 중단
+- 다시 표시 시 `init()` + `animate()` 재개
+- MutationObserver로 `style` 속성 변경 감지
+
+#### 10.1.2 Stats 카운터 섹션 (신규)
+```html
+[10] 분석 모듈  |  [6] 차원 데이터 (5W1H)  |  [300+] 분석 지표·차트  |  [₩0] 서버 비용
+```
+- Intersection Observer로 뷰포트 진입 시 0에서 목표값까지 카운트업 애니메이션
+- easeOutCubic 커브, 1800ms 지속시간
+- 그라데이션 텍스트 (파란→시안)
+
+#### 10.1.3 How it Works 3-Step 섹션 (신규)
+```
+STEP 01          →          STEP 02          →          STEP 03
+DB 파일 로드              AI 큐브 자동 변환         대시보드 즉시 사용
+```
+- 그라데이션 아이콘 (64×64px, border-radius 20px)
+- 화살표 구분자, 모바일에서 세로 배치 + 화살표 90° 회전
+
+#### 10.1.4 Dashboard Preview 섹션 (신규)
+- macOS 스타일 윈도우 프레임 (빨/노/초 트래픽 라이트)
+- 좌측 사이드바 Mock: 10개 메뉴 항목 (프로젝트 개요~AI Report)
+- 우측 메인 영역:
+  - KPI 카드 4개 (공정률 72.3%, SPI 0.94, CPI 1.02, EAC ₩187억)
+  - 차트 Mock: 바 차트 (CSS var `--h`로 높이 지정) + 라인 차트 (SVG mask)
+
+#### 10.1.5 스크롤 Reveal 애니메이션
+- `.landing-reveal` 클래스: 초기 `opacity:0; translateY(40px)`
+- Intersection Observer (threshold 0.15, root: `#landing-page`)
+- 진입 시 `.revealed` 클래스 추가 → `opacity:1; translateY(0)` 전환
+- 적용 섹션: API Key, Pipeline, Features, Tech Stack, CTA + 신규 3개
+
+#### 10.1.6 푸터 버전 뱃지 업데이트
+- `v3.1 · Last Updated 2026.02.19` 뱃지 추가
+- `.landing-footer-version`: pill 형태, 배경 `#F0F0F2`
+
+#### 10.1.7 배경 점(모눈) 패턴 삭제
+- **삭제**: `radial-gradient(circle, #d2d2d7 1px, transparent 1px)` + `background-size: 32px 32px`
+- **변경**: 단색 배경 `background: #FBFBFD`
+
+### 10.2 파이프라인 다이어그램 글래스모피즘
+
+#### 10.2.1 감싸는 카드 (`.pipeline-diagram`)
+- **이전**: `background: linear-gradient(180deg, #f5f5f7 0%, #ffffff 50%, #f5f5f7 100%)`
+- **이후**: `background: rgba(245, 245, 247, 0.1)` + `backdrop-filter: blur(4px)` + `border: rgba(232, 232, 237, 0.25)`
+
+#### 10.2.2 개별 노드 (`.pipeline-node`)
+- **이전**: `background: #fff` (불투명)
+- **이후**: `background: rgba(255, 255, 255, 0.2)` + `backdrop-filter: blur(10px)` + `border: rgba(210, 210, 215, 0.25)`
+
+→ 배경 파티클/웨이브가 카드를 통해 비쳐 보이는 효과
+
+### 10.3 EVMS 데이터 통합 (`step7_evms_04`)
+
+#### 10.3.1 신규 파일
+- `.raw_db/step7_evms_04.csv` — EVMS 4차 데이터
+- `.raw_db/csv_to_sqlite_v4.py` — v4 DB 변환 스크립트
+
+#### 10.3.2 EVMS 페이지 수정 (`js/pages/evms.js`)
+- step7 데이터의 새로운 컬럼 매핑 반영
+
+### 10.4 공정관리 페이지 수정 (`js/pages/schedule.js`)
+
+#### 10.4.1 주간 공정표 필터 수정
+- **문제**: 주간 공정표가 날짜 필터링 없이 전체 데이터를 표시
+- **해결**: `WHEN1_시작일`/`WHEN2종료일`로 현재 주간 범위 필터링 적용
+
+### 10.5 네비게이션 개선 (`js/app.js`)
+
+#### 10.5.1 항상 프로젝트 개요로 시작
+- 랜딩 페이지에서 "대시보드 시작" 클릭 시 항상 `#/overview`로 이동
+- DB 이미 로드된 상태에서 재진입 시에도 `window.location.hash = '#/overview'`
+- 두 경로 모두 프로젝트 개요가 첫 화면
+
+### 10.6 Program Spec 섹션 업데이트 (`index.html`)
+- Frontend: `HTML5 / CSS3 / JavaScript (ES6)` → `HTML5 / CSS3 / Vanilla JS`
+- Backend: `SQL.js (SQLite in Browser)` 유지
+- AI Engine: `Google Gemini 2.0 Flash` → `Gemini 2.0 Flash`
+- Deployment: `GitHub Pages (Static)` → `Vercel (Static Hosting)`
+
+### 10.7 Vercel 배포
+
+- **배포 URL**: `https://ai-pmis.vercel.app/`
+- **Git 저장소**: `bignine99/ai_pmis` (GitHub)
+- **배포 방식**: Vercel 자동 배포 (Git Push → 자동 빌드)
+- **회사 홈페이지 연결**: 기존 네이버 클라우드 서버 홈페이지에 링크 버튼 추가 방식 권장
+
+### 10.8 Git 커밋 기록
+```
+[main f58ff3d] Landing page: dynamic bg animation, glassmorphism pipeline, 
+stats counter, how-it-works, dashboard preview, scroll reveal, 
+Program Spec update, version badge, always start at overview
+
+9 files changed, 10,492 insertions(+), 75 deletions(-)
+ create mode 100644 .raw_db/csv_to_sqlite_v4.py
+ create mode 100644 .raw_db/step7_evms_04.csv
+ create mode 100644 js/landing_bg.js
+```
+
+### 10.9 변경된 파일 목록
+
+| 파일 | 변경 유형 | 주요 내용 |
+|------|----------|----------|
+| `css/style.css` | 대규모 수정 | 글래스모피즘, 스크롤 reveal, Stats/How/Preview/Footer 신규 CSS (+350줄), 모눈 패턴 삭제 |
+| `index.html` | 대규모 수정 | 새 섹션 3개 (Stats, How, Preview), 동적 배경 캔버스, Program Spec 수정, 푸터 버전 뱃지, landing-reveal 클래스, CSS v52 |
+| `js/landing_bg.js` | **신규** | 파티클/웨이브/연결선 배경 애니메이션 + 스크롤 Reveal Observer + 카운트업 애니메이션 |
+| `js/app.js` | 수정 | 항상 `#/overview`로 시작 (2곳) |
+| `js/org_charts.js` | 수정 | 조직도 관련 수정 반영 |
+| `js/pages/evms.js` | 수정 | step7 데이터 매핑 |
+| `js/pages/schedule.js` | 수정 | 주간 공정표 필터 수정 |
+| `.raw_db/csv_to_sqlite_v4.py` | **신규** | DB v4 변환 스크립트 |
+| `.raw_db/step7_evms_04.csv` | **신규** | EVMS 4차 데이터 |
+
+### 10.10 캐시 방지 업데이트
+- `index.html`: CSS `?v=52`, `landing_bg.js ?v=5` (이전: 없음)
+
+---
+
+## 11. 프로젝트 구조 최신 (2026-02-19 기준)
+
+```
+260216_evms_dashborad/
+├── index.html              ← 메인 HTML (CSS v52, 랜딩 전면 개편)
+├── css/style.css           ← 글로벌 스타일 ★ 글래스모피즘/Reveal/신규 섹션 CSS
+├── js/
+│   ├── app.js              ← SPA 라우터 + 위험배지 + animateCountUp ★ 항상 overview 시작
+│   ├── ai_engine.js        ← AI SQL 엔진
+│   ├── db_modules.js       ← SQLite 쿼리 모듈
+│   ├── landing_bg.js       ← ★ 신규: 동적 배경 + 스크롤 Reveal + 카운트업
+│   ├── org_charts.js       ← 조직도 차트
+│   ├── components.js       ← (미사용, app.js에 통합됨)
+│   └── pages/
+│       ├── overview.js     ← 프로젝트 개요
+│       ├── cost.js         ← 원가관리 (2/16)
+│       ├── schedule.js     ← 공정관리 ★ 주간 필터 수정
+│       ├── quantity.js     ← 물량관리
+│       ├── organization.js ← 조직관리
+│       ├── evms.js         ← 기성/진도 (EVMS) ★ step7 데이터
+│       ├── productivity.js ← 생산성관리
+│       ├── ai_analysis.js  ← AI 분석 채팅
+│       ├── ai_report.js    ← AI 리포트
+│       └── cube_view.js    ← 큐브 뷰 (피벗 테이블)
+├── .raw_db/
+│   ├── csv_to_sqlite_v4.py ← ★ 신규: DB v4 변환 스크립트
+│   └── step7_evms_04.csv   ← ★ 신규: EVMS 4차 데이터
+├── .references/
+│   └── modification_processes.md ← 이 파일
+└── output/
+    └── project_db_v3.sqlite ← SQLite DB (v3)
+```
+
