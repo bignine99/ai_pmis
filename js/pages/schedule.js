@@ -508,18 +508,36 @@ function renderSchedulePage(container) {
         '<div style="text-align:right;margin-top:2px"><span style="color:#3B82F6;font-weight:800;font-size:0.75rem">D-' + Math.max(0, Math.ceil((new Date('2027-07-20') - new Date()) / 86400000)) + '일</span></div>' +
         '</div>' +
         '</div>' +
-        // ─ 카드3: 이번 달 주요 공정 ─
-        '<div class="glass-card" style="padding:14px 16px">' +
-        '<div style="display:flex;align-items:center;gap:10px">' +
-        '<div class="kpi-icon kpi-accent-green" style="width:32px;height:32px;font-size:0.8rem"><i class="fa-solid fa-list-check"></i></div>' +
-        '<div style="font-size:0.78rem;font-weight:700;color:var(--text-primary)">이번 달 주요 공정</div>' +
-        '</div>' +
-        '<div style="margin-top:10px;font-size:0.65rem;color:var(--text-primary);line-height:1.8">' +
-        '<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#3B82F6;color:#fff;font-size:0.5rem;font-weight:700;flex-shrink:0">1</span><span style="font-weight:600">본관동 B1F 골조 공사</span></div>' +
-        '<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#3B82F6;color:#fff;font-size:0.5rem;font-weight:700;flex-shrink:0">2</span><span style="font-weight:600">본관동 B1F 철골 공사</span></div>' +
-        '<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#3B82F6;color:#fff;font-size:0.5rem;font-weight:700;flex-shrink:0">3</span><span style="font-weight:600">B1F 지하층 되메우기 공사</span></div>' +
-        '</div>' +
-        '</div>' +
+        // ─ 카드3: 이번 달 주요 공정 (동적) ─
+        (function () {
+            var now = new Date();
+            var y = now.getFullYear();
+            var m = now.getMonth();
+            var thisMonthStart = new Date(y, m, 1).toISOString().slice(0, 10);
+            var thisMonthEnd = new Date(y, m + 1, 0).toISOString().slice(0, 10);
+            var monthTasks = DB.runQuery(
+                "SELECT DISTINCT HOW3_작업명, SUM(R10_합계_금액) as total FROM evms " +
+                "WHERE WHEN1_시작일 <= '" + thisMonthEnd + "' AND WHEN2종료일 >= '" + thisMonthStart + "' " +
+                "AND HOW3_작업명 IS NOT NULL AND HOW3_작업명 != '' " +
+                "GROUP BY HOW3_작업명 ORDER BY total DESC LIMIT 3"
+            );
+            var taskItems = '';
+            if (monthTasks.values && monthTasks.values.length > 0) {
+                monthTasks.values.forEach(function (t, i) {
+                    taskItems += '<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#3B82F6;color:#fff;font-size:0.5rem;font-weight:700;flex-shrink:0">' + (i + 1) + '</span><span style="font-weight:600">' + (t[0] || '-') + '</span></div>';
+                });
+            } else {
+                taskItems = '<div style="color:var(--text-muted)">이번 달 진행 공정 없음</div>';
+            }
+            return '<div class="glass-card" style="padding:14px 16px">' +
+                '<div style="display:flex;align-items:center;gap:10px">' +
+                '<div class="kpi-icon kpi-accent-green" style="width:32px;height:32px;font-size:0.8rem"><i class="fa-solid fa-list-check"></i></div>' +
+                '<div style="font-size:0.78rem;font-weight:700;color:var(--text-primary)">이번 달 주요 공정</div>' +
+                '</div>' +
+                '<div style="margin-top:10px;font-size:0.65rem;color:var(--text-primary);line-height:1.8">' +
+                taskItems +
+                '</div></div>';
+        })() +
         // ─ 카드4: SPI 게이지 (고급) ─
         (function () {
             var spi = evmsData.spi || 0;

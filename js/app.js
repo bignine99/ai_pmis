@@ -16,21 +16,136 @@
 
     var contentArea = document.getElementById('content-area');
     var loadingScreen = document.getElementById('loading-screen');
+    var landingPage = document.getElementById('landing-page');
 
-    // == 안전장치: 15초 이상 로딩되면 강제 해제 ==
-    var loadingTimeout = setTimeout(function () {
-        console.warn('[APP] Loading timeout! Force-hiding loading screen.');
-        hideLoading();
-        if (contentArea) {
+    // ── 랜딩 페이지 인터랙션 설정 ──
+    var apiKeyInput = document.getElementById('landing-api-key');
+    var apiToggle = document.getElementById('landing-api-toggle');
+    var startBtn = document.getElementById('landing-start-btn');
+
+    // 저장된 API 키 복원
+    var savedKey = localStorage.getItem('gemini-api-key') || '';
+    if (savedKey && apiKeyInput) apiKeyInput.value = savedKey;
+
+    // 비밀번호 토글
+    if (apiToggle && apiKeyInput) {
+        apiToggle.addEventListener('click', function () {
+            var isPass = apiKeyInput.type === 'password';
+            apiKeyInput.type = isPass ? 'text' : 'password';
+            apiToggle.querySelector('i').className = isPass ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        });
+    }
+
+    // ── 대시보드 시작 버튼 ──
+    if (startBtn) {
+        startBtn.addEventListener('click', function () {
+            launchDashboard();
+        });
+    }
+
+    // Enter 키로도 시작
+    if (apiKeyInput) {
+        apiKeyInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') launchDashboard();
+        });
+    }
+
+    async function launchDashboard() {
+        // 이미 DB가 로드된 상태 (홈에서 돌아온 후)
+        if (DB.isReady()) {
+            var appLayout = document.querySelector('.app-layout');
+            if (appLayout) appLayout.style.display = '';
+            window.location.hash = '#/overview';
+            hideLandingPage();
+            return;
+        }
+
+        // 버튼 상태 변경
+        if (startBtn) {
+            var textEl = startBtn.querySelector('.landing-start-text');
+            var loadEl = startBtn.querySelector('.landing-start-loading');
+            if (textEl) textEl.style.display = 'none';
+            if (loadEl) loadEl.style.display = 'flex';
+            startBtn.disabled = true;
+            startBtn.style.pointerEvents = 'none';
+        }
+
+        // API 키 저장
+        var key = apiKeyInput ? apiKeyInput.value.trim() : '';
+        if (key) {
+            localStorage.setItem('gemini-api-key', key);
+            // AI 엔진에 키 전달
+            if (window.AIEngine && typeof window.AIEngine.setApiKey === 'function') {
+                window.AIEngine.setApiKey(key);
+            }
+        }
+
+        // DB 로드
+        try {
+            console.log('[APP] Step 1: Initializing database...');
+            var dbLoaded = await DB.initDatabase('output/project_db_v3.sqlite');
+
+            if (!dbLoaded) {
+                console.error('[APP] Database load returned false.');
+                if (landingPage) landingPage.style.display = 'none';
+                contentArea.innerHTML =
+                    '<div class="text-center py-5">' +
+                    '<i class="fa-solid fa-database fa-3x mb-3" style="color:var(--text-muted)"></i>' +
+                    '<h4 style="color:var(--text-primary)">Database Load Failed</h4>' +
+                    '<p style="color:var(--text-secondary)">output/project_db_v3.sqlite 파일을 확인해 주세요.</p>' +
+                    '</div>';
+                return;
+            }
+
+            console.log('[APP] Step 2: DB loaded OK. Setting up routes...');
+            window.location.hash = '#/overview';
+            initializeApp();
+        } catch (err) {
+            console.error('[APP] Fatal error:', err);
+            if (landingPage) landingPage.style.display = 'none';
             contentArea.innerHTML =
                 '<div class="text-center py-5">' +
                 '<i class="fa-solid fa-triangle-exclamation fa-3x mb-3" style="color:var(--warning)"></i>' +
-                '<h4 style="color:var(--text-primary)">로딩 시간 초과</h4>' +
-                '<p style="color:var(--text-secondary)">데이터베이스 로드에 실패했습니다.</p>' +
-                '<p style="color:var(--text-muted)" class="small">F12 키를 눌러 Console 탭에서 오류를 확인해 주세요.</p>' +
+                '<h4 style="color:var(--text-primary)">로딩 오류</h4>' +
+                '<p style="color:var(--text-secondary)">' + err.message + '</p>' +
                 '</div>';
         }
-    }, 15000);
+    }
+
+    function hideLandingPage() {
+        if (landingPage) {
+            landingPage.classList.add('landing-exit');
+            setTimeout(function () {
+                landingPage.style.display = 'none';
+                landingPage.classList.remove('landing-exit');
+            }, 700);
+        }
+    }
+
+    function showLandingPage() {
+        if (landingPage) {
+            // 대시보드 숨기기
+            var appLayout = document.querySelector('.app-layout');
+            if (appLayout) appLayout.style.display = 'none';
+
+            // 랜딩페이지 보이기 (entrance animation)
+            landingPage.style.display = '';
+            landingPage.classList.add('landing-enter');
+            setTimeout(function () {
+                landingPage.classList.remove('landing-enter');
+            }, 600);
+
+            // 시작 버튼 상태 복원
+            if (startBtn) {
+                var textEl = startBtn.querySelector('.landing-start-text');
+                var loadEl = startBtn.querySelector('.landing-start-loading');
+                if (textEl) textEl.style.display = '';
+                if (loadEl) loadEl.style.display = 'none';
+                startBtn.disabled = false;
+                startBtn.style.pointerEvents = '';
+            }
+        }
+    }
 
     function hideLoading() {
         if (loadingScreen) {
@@ -39,25 +154,7 @@
         }
     }
 
-    try {
-        // 1. 데이터베이스 초기화
-        console.log('[APP] Step 1: Initializing database...');
-        var dbLoaded = await DB.initDatabase('output/project_db_v3.sqlite');
-        clearTimeout(loadingTimeout);
-
-        if (!dbLoaded) {
-            console.error('[APP] Database load returned false.');
-            hideLoading();
-            contentArea.innerHTML =
-                '<div class="text-center py-5">' +
-                '<i class="fa-solid fa-database fa-3x mb-3" style="color:var(--text-muted)"></i>' +
-                '<h4 style="color:var(--text-primary)">Database Load Failed</h4>' +
-                '<p style="color:var(--text-secondary)">output/project_db.sqlite 파일을 확인해 주세요.</p>' +
-                '</div>';
-            return;
-        }
-
-        console.log('[APP] Step 2: DB loaded OK. Setting up routes...');
+    function initializeApp() {
 
         // 2. SPA 라우터
         var routes = {
@@ -158,6 +255,13 @@
         hideLoading();
         handleRoute();
 
+        // API 키 AI 엔진에 적용
+        var storedKey = localStorage.getItem('gemini-api-key');
+        if (storedKey && window.AIEngine && window.AIEngine.setApiKey) {
+            window.AIEngine.setApiKey(storedKey);
+            console.log('[APP] Gemini API key restored from localStorage');
+        }
+
         // 4. 사이드바 네비게이션 이벤트
         document.querySelectorAll('.nav-link[data-section]').forEach(function (link) {
             link.addEventListener('click', function (e) {
@@ -200,10 +304,32 @@
         // ── 리스크 알림 배지 (Risk Alert Badge) ──────────────
         try {
             if (DB && DB.isReady()) {
-                // SPI < 0.8인 고위험 작업 수
-                var highRiskCount = DB.runScalar("SELECT COUNT(*) FROM evms WHERE \"WHEN4_실행률(%)\" IS NOT NULL AND \"WHEN4_실행률(%)\" > 0 AND \"WHEN4_실행률(%)\" < 0.8 AND R10_합계_금액 > 10000000");
-                // 종료일 초과 작업 수
-                var overdueCount = DB.runScalar("SELECT COUNT(*) FROM evms WHERE WHEN2종료일 < date('now') AND \"WHEN4_실행률(%)\" < 1.0 AND \"WHEN4_실행률(%)\" IS NOT NULL");
+                // 종료일 지났는데 미완료인 작업 수 (진짜 지연 작업)
+                var highRiskCount = DB.runScalar("SELECT COUNT(*) FROM evms WHERE WHEN2종료일 < date('now') AND \"WHEN4_실행률(%)\" IS NOT NULL AND \"WHEN4_실행률(%)\" < 1.0 AND R10_합계_금액 > 10000000");
+                // 종료일 초과 + 실행률이 매우 낮은 심각 지연 작업
+                var overdueCount = DB.runScalar("SELECT COUNT(*) FROM evms WHERE WHEN2종료일 < date('now') AND \"WHEN4_실행률(%)\" IS NOT NULL AND \"WHEN4_실행률(%)\" < 0.5 AND R10_합계_금액 > 10000000");
+
+                // 상세 데이터 미리 조회 (클릭 시 사용)
+                var riskDetailRows = [];
+                try {
+                    var riskQuery = DB.runQuery(
+                        "SELECT WHERE2_동, HOW3_작업명, WHEN2종료일, \"WHEN4_실행률(%)\", R10_합계_금액 " +
+                        "FROM evms WHERE WHEN2종료일 < date('now') AND \"WHEN4_실행률(%)\" IS NOT NULL " +
+                        "AND \"WHEN4_실행률(%)\" < 1.0 AND R10_합계_금액 > 10000000 " +
+                        "ORDER BY R10_합계_금액 DESC LIMIT 20"
+                    );
+                    if (riskQuery.values) riskDetailRows = riskQuery.values;
+                } catch (e) { console.warn('Risk detail query error:', e); }
+
+                // 전역 저장 (페이지 렌더 시 접근)
+                window.__riskBadgeData = {
+                    highRiskCount: highRiskCount,
+                    overdueCount: overdueCount,
+                    detailRows: riskDetailRows
+                };
+
+                // 배지 스타일 (세로 중앙 정렬)
+                var badgeStyle = 'position:absolute;top:50%;right:6px;transform:translateY(-50%);color:#fff;font-size:0.55rem;font-weight:700;padding:2px 6px;border-radius:10px;min-width:18px;text-align:center;line-height:1.3;cursor:pointer;z-index:5;animation:badgePulse 2s ease-in-out infinite;';
 
                 // 진도관리 메뉴에 배지 추가
                 var evmsLink = document.querySelector('.nav-link[data-section="evms"]');
@@ -213,27 +339,45 @@
                     var badge = document.createElement('span');
                     badge.className = 'risk-alert-badge';
                     badge.textContent = badgeNum > 99 ? '99+' : badgeNum;
-                    badge.style.cssText = 'position:absolute;top:4px;right:6px;background:' + badgeColor + ';color:#fff;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:10px;min-width:16px;text-align:center;line-height:1.4;animation:badgePulse 2s ease-in-out infinite;';
+                    badge.style.cssText = badgeStyle + 'background:' + badgeColor + ';';
+                    badge.title = '지연 작업 ' + badgeNum + '건 (클릭하여 상세보기)';
                     evmsLink.style.position = 'relative';
                     evmsLink.appendChild(badge);
+
+                    // 클릭 이벤트: 진도관리 페이지로 이동 후 하단에 상세 패널 표시
+                    badge.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // 진도관리 페이지로 이동
+                        evmsLink.click();
+                        setTimeout(function () { showRiskDetailPanel('evms'); }, 300);
+                    });
                 }
 
-                // AI Report 메뉴에도 배지 (리스크 히트맵 알림)
+                // AI Report 메뉴에도 배지 (리스크 알림)
                 var reportLink = document.querySelector('.nav-link[data-section="report"]');
                 if (reportLink && highRiskCount > 0) {
                     var rBadge = document.createElement('span');
                     rBadge.className = 'risk-alert-badge';
                     rBadge.textContent = '!';
-                    rBadge.style.cssText = 'position:absolute;top:4px;right:6px;background:#EF4444;color:#fff;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:10px;min-width:16px;text-align:center;line-height:1.4;animation:badgePulse 2s ease-in-out infinite;';
+                    rBadge.style.cssText = badgeStyle + 'background:#EF4444;';
+                    rBadge.title = '리스크 경고 (클릭하여 상세보기)';
                     reportLink.style.position = 'relative';
                     reportLink.appendChild(rBadge);
+
+                    rBadge.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        reportLink.click();
+                        setTimeout(function () { showRiskDetailPanel('report'); }, 300);
+                    });
                 }
 
                 // 배지 애니메이션 주입
                 if (!document.getElementById('badge-pulse-style')) {
                     var bStyle = document.createElement('style');
                     bStyle.id = 'badge-pulse-style';
-                    bStyle.textContent = '@keyframes badgePulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.15); } }';
+                    bStyle.textContent = '@keyframes badgePulse { 0%,100% { transform:translateY(-50%) scale(1); } 50% { transform:translateY(-50%) scale(1.15); } }';
                     document.head.appendChild(bStyle);
                 }
                 console.log('[APP] Risk badges: highRisk=' + highRiskCount + ', overdue=' + overdueCount);
@@ -269,19 +413,20 @@
 
         console.log('[APP] ✅ Dashboard ready!');
 
-    } catch (error) {
-        clearTimeout(loadingTimeout);
-        console.error('[APP] Fatal error during init:', error);
-        hideLoading();
-        if (contentArea) {
-            contentArea.innerHTML =
-                '<div class="text-center py-5">' +
-                '<i class="fa-solid fa-bug fa-3x mb-3" style="color:var(--danger)"></i>' +
-                '<h4 style="color:var(--text-primary)">Initialization Error</h4>' +
-                '<p style="color:var(--text-secondary)">' + error.message + '</p>' +
-                '</div>';
+        // 랜딩 페이지 퇴장 + 앱 레이아웃 표시
+        var appLayout = document.querySelector('.app-layout');
+        if (appLayout) appLayout.style.display = '';
+        hideLandingPage();
+
+        // 홈 버튼 이벤트
+        var homeBtn = document.getElementById('sidebar-home-btn');
+        if (homeBtn) {
+            homeBtn.addEventListener('click', function () {
+                showLandingPage();
+            });
         }
-    }
+    } // end initializeApp
+
 })();
 
 function updateThemeIcon(theme) {
@@ -651,8 +796,9 @@ function renderGlobalHeader() {
 
     var weekTasks = DB.runQuery(
         "SELECT DISTINCT WHERE2_동, HOW3_작업명 FROM evms " +
-        "WHERE WHEN1_시작일 >= '" + monStr + "' AND WHEN1_시작일 <= '" + sunStr + "' " +
+        "WHERE WHEN1_시작일 <= '" + sunStr + "' AND WHEN2종료일 >= '" + monStr + "' " +
         "AND WHEN1_시작일 IS NOT NULL AND WHEN1_시작일 != '' " +
+        "AND WHEN2종료일 IS NOT NULL AND WHEN2종료일 != '' " +
         "ORDER BY WHERE2_동 LIMIT 5"
     );
     var taskText = '예정 작업 없음';
@@ -701,7 +847,22 @@ function renderGlobalHeader() {
         '<div class="gh-value" style="font-size:0.7rem">SPI ' + evms.spi.toFixed(2) + '</div>' +
         '</div></div>' +
         '<div class="gh-divider"></div>' +
-        // 5. D-day
+        // 5. 오늘 날짜 & 착공 후 경과일
+        '<div class="gh-cell">' +
+        '<i class="fa-solid fa-calendar-day" style="color:#6366F1;font-size:0.72rem"></i>' +
+        '<div>' +
+        '<div class="gh-label">' + today + '</div>' +
+        '<div class="gh-value" style="font-size:0.7rem;color:#6366F1">착공 후 ' + (function () {
+            var startDate = DB.runScalar("SELECT MIN(WHEN1_시작일) FROM evms WHERE WHEN1_시작일 IS NOT NULL AND WHEN1_시작일 != ''") || '';
+            if (startDate) {
+                var elapsed = Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24));
+                return elapsed + '일';
+            }
+            return '-';
+        })() + '</div>' +
+        '</div></div>' +
+        '<div class="gh-divider"></div>' +
+        // 6. D-day
         '<div class="gh-cell">' +
         '<i class="fa-solid fa-flag-checkered" style="color:var(--warning);font-size:0.72rem"></i>' +
         '<div>' +
@@ -783,3 +944,151 @@ function renderGlobalHeader() {
     })();
 }
 
+/**
+ * 리스크 배지 상세 패널 — 해당 페이지 최하단에 삽입
+ * @param {string} targetPage - 'evms' | 'report'
+ */
+function showRiskDetailPanel(targetPage) {
+    var data = window.__riskBadgeData;
+    if (!data) return;
+
+    // 기존 패널 제거
+    var existing = document.getElementById('risk-detail-panel');
+    if (existing) { existing.remove(); }
+
+    var container = document.querySelector('.content-wrapper');
+    if (!container) return;
+
+    var rows = data.detailRows || [];
+    var today = new Date().toISOString().split('T')[0];
+
+    // 테이블 행 생성
+    var tableRows = '';
+    rows.forEach(function (r, i) {
+        var dong = r[0] || '-';
+        var task = r[1] || '-';
+        var endDate = r[2] || '-';
+        var progress = r[3] !== null && r[3] !== undefined ? (r[3] * 100).toFixed(1) + '%' : '-';
+        var progressVal = r[3] || 0;
+        var amount = r[4] || 0;
+        var amountStr = amount >= 1e8 ? (amount / 1e8).toFixed(1) + '억' : (amount / 1e4).toFixed(0) + '만';
+
+        // 지연일 계산
+        var delayDays = '-';
+        if (endDate !== '-') {
+            var diff = Math.round((new Date(today) - new Date(endDate)) / (1000 * 60 * 60 * 24));
+            delayDays = '+' + diff + '일';
+        }
+
+        // 위험도 색상
+        var riskColor = progressVal < 0.3 ? '#EF4444' : progressVal < 0.7 ? '#F59E0B' : '#3B82F6';
+        var riskLabel = progressVal < 0.3 ? '심각' : progressVal < 0.7 ? '주의' : '경미';
+        var riskBg = progressVal < 0.3 ? 'rgba(239,68,68,0.08)' : progressVal < 0.7 ? 'rgba(245,158,11,0.08)' : 'rgba(59,130,246,0.08)';
+
+        tableRows +=
+            '<tr style="border-bottom:1px solid var(--border-default);' + (i % 2 ? 'background:var(--bg-secondary)' : '') + '">' +
+            '<td style="padding:8px 10px;font-size:0.65rem;color:var(--text-muted);text-align:center">' + (i + 1) + '</td>' +
+            '<td style="padding:8px 10px;font-size:0.68rem;font-weight:600;color:var(--text-primary)">' + dong + '</td>' +
+            '<td style="padding:8px 10px;font-size:0.68rem;color:var(--text-primary);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + task + '">' + task + '</td>' +
+            '<td style="padding:8px 10px;font-size:0.65rem;color:var(--text-muted);font-family:\'JetBrains Mono\',monospace;text-align:center">' + endDate + '</td>' +
+            '<td style="padding:8px 10px;font-size:0.65rem;font-weight:700;color:#EF4444;font-family:\'JetBrains Mono\',monospace;text-align:center">' + delayDays + '</td>' +
+            '<td style="padding:8px 10px;text-align:center">' +
+            '<div style="display:inline-flex;align-items:center;gap:4px">' +
+            '<div style="width:50px;height:6px;background:var(--bg-input);border-radius:3px;overflow:hidden">' +
+            '<div style="width:' + (progressVal * 100) + '%;height:100%;background:' + riskColor + ';border-radius:3px"></div>' +
+            '</div>' +
+            '<span style="font-size:0.6rem;font-family:\'JetBrains Mono\',monospace;color:' + riskColor + '">' + progress + '</span>' +
+            '</div>' +
+            '</td>' +
+            '<td style="padding:8px 10px;font-size:0.65rem;font-weight:600;color:var(--text-primary);font-family:\'JetBrains Mono\',monospace;text-align:right">' + amountStr + '</td>' +
+            '<td style="padding:8px 10px;text-align:center"><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.55rem;font-weight:700;background:' + riskBg + ';color:' + riskColor + '">' + riskLabel + '</span></td>' +
+            '</tr>';
+    });
+
+    var panelHtml =
+        '<div id="risk-detail-panel" style="margin-top:16px;animation:fadeSlideUp 0.4s ease both">' +
+
+        // ── 상단 헤더 ──
+        '<div class="glass-card" style="padding:0;overflow:hidden">' +
+
+        // 빨간 상단 바
+        '<div style="background:linear-gradient(135deg,#EF4444,#DC2626);padding:16px 20px;color:#fff">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">' +
+        '<div style="display:flex;align-items:center;gap:10px">' +
+        '<div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-triangle-exclamation" style="font-size:1rem"></i></div>' +
+        '<div>' +
+        '<div style="font-size:0.95rem;font-weight:800">⚠ 리스크 알림 상세 분석</div>' +
+        '<div style="font-size:0.65rem;opacity:0.85">기준일: ' + today + ' · 종료일 경과 미완료 작업</div>' +
+        '</div>' +
+        '</div>' +
+        '<button onclick="document.getElementById(\'risk-detail-panel\').remove()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:0.7rem;font-weight:600"><i class="fa-solid fa-xmark"></i> 닫기</button>' +
+        '</div>' +
+        '</div>' +
+
+        // ── 요약 카드 ──
+        '<div style="padding:14px 20px;display:flex;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--border-default)">' +
+        '<div style="flex:1;min-width:120px;padding:10px 14px;border-radius:10px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.12);text-align:center">' +
+        '<div style="font-size:0.6rem;color:var(--text-muted);margin-bottom:2px">지연 작업 (전체)</div>' +
+        '<div style="font-size:1.3rem;font-weight:800;color:#EF4444;font-family:\'JetBrains Mono\',monospace">' + data.highRiskCount + '<span style="font-size:0.65rem;font-weight:500;color:var(--text-muted)">건</span></div>' +
+        '</div>' +
+        '<div style="flex:1;min-width:120px;padding:10px 14px;border-radius:10px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.12);text-align:center">' +
+        '<div style="font-size:0.6rem;color:var(--text-muted);margin-bottom:2px">심각 지연 (진도 50% 미만)</div>' +
+        '<div style="font-size:1.3rem;font-weight:800;color:#F59E0B;font-family:\'JetBrains Mono\',monospace">' + data.overdueCount + '<span style="font-size:0.65rem;font-weight:500;color:var(--text-muted)">건</span></div>' +
+        '</div>' +
+        '<div style="flex:1;min-width:120px;padding:10px 14px;border-radius:10px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.12);text-align:center">' +
+        '<div style="font-size:0.6rem;color:var(--text-muted);margin-bottom:2px">금액 기준 (1천만원 이상)</div>' +
+        '<div style="font-size:1.3rem;font-weight:800;color:#3B82F6;font-family:\'JetBrains Mono\',monospace">' + rows.length + '<span style="font-size:0.65rem;font-weight:500;color:var(--text-muted)">건 표시</span></div>' +
+        '</div>' +
+        '</div>' +
+
+        // ── 테이블 ──
+        '<div style="overflow-x:auto;padding:0">' +
+        '<table style="width:100%;border-collapse:collapse">' +
+        '<thead><tr style="background:var(--bg-secondary);border-bottom:2px solid var(--border-default)">' +
+        '<th style="padding:8px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600;text-align:center">No</th>' +
+        '<th style="padding:8px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600;text-align:left">동</th>' +
+        '<th style="padding:8px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600;text-align:left">작업명</th>' +
+        '<th style="padding:8px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600;text-align:center">종료일</th>' +
+        '<th style="padding:8px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600;text-align:center">지연일</th>' +
+        '<th style="padding:8px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600;text-align:center">실행률</th>' +
+        '<th style="padding:8px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600;text-align:right">금액</th>' +
+        '<th style="padding:8px 10px;font-size:0.6rem;color:var(--text-muted);font-weight:600;text-align:center">위험도</th>' +
+        '</tr></thead>' +
+        '<tbody>' + tableRows + '</tbody>' +
+        '</table>' +
+        '</div>' +
+
+        // ── 해설 섹션 ──
+        '<div style="padding:16px 20px;border-top:1px solid var(--border-default);background:var(--bg-secondary)">' +
+        '<div style="display:flex;align-items:flex-start;gap:10px">' +
+        '<i class="fa-solid fa-circle-info" style="color:#3B82F6;font-size:0.9rem;margin-top:2px;flex-shrink:0"></i>' +
+        '<div style="font-size:0.68rem;color:var(--text-secondary);line-height:1.7">' +
+        '<div style="font-weight:700;color:var(--text-primary);margin-bottom:4px">📌 배지 숫자 해설</div>' +
+        '<div>• <b style="color:#EF4444">사이드바 숫자 (' + data.highRiskCount + ')</b>: 종료일이 경과했으나 실행률이 100% 미만인 작업 수 (금액 1천만원 이상).</div>' +
+        '<div>• <b style="color:#EF4444">AI Report !</b>: 지연 작업이 존재한다는 경고 표시. 클릭 시 상세 내역을 확인할 수 있습니다.</div>' +
+        '<div>• <b style="color:#F59E0B">심각 지연</b>: 종료일이 경과했는데 실행률이 50% 미만인 작업으로, 즉각적인 만회대책이 필요합니다.</div>' +
+        '<div style="margin-top:6px;font-weight:700;color:var(--text-primary)">📋 권장 조치사항</div>' +
+        '<div>1. 지연 원인 분석 (자재 지연, 인력 부족, 설계 변경 등)</div>' +
+        '<div>2. 만회 공정표 작성 및 투입인력 증원 검토</div>' +
+        '<div>3. 공종 간 선·후행 관계를 감안한 공사 병행 추진</div>' +
+        '<div>4. 주간 공정회의에서 지연 작업 우선 점검</div>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+
+        '</div>' + // glass-card 끝
+        '</div>'; // risk-detail-panel 끝
+
+    // 페이지 하단에 삽입
+    var panelDiv = document.createElement('div');
+    panelDiv.innerHTML = panelHtml;
+    container.appendChild(panelDiv.firstElementChild);
+
+    // 패널로 스크롤
+    setTimeout(function () {
+        var panel = document.getElementById('risk-detail-panel');
+        if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+}
+
+window.showRiskDetailPanel = showRiskDetailPanel;

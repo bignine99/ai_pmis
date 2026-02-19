@@ -62,12 +62,12 @@ function buildMonthlyHeatmap(containerId, schedRows) {
     // 오늘 해당 월
     var todayLabel = today.getFullYear().toString().slice(2) + '.' + String(today.getMonth() + 1).padStart(2, '0');
 
-    var cellW = 28, nameW = 120, rowH = 20;
+    var cellW = 36, nameW = 130, rowH = 22;
 
     var html = '';
     // 스크롤 래퍼
-    html += '<div style="overflow-x:auto;overflow-y:auto;max-height:' + Math.min(companies.length * rowH + 80, 500) + 'px">';
-    html += '<table style="border-collapse:collapse;font-size:0.5rem;white-space:nowrap">';
+    html += '<div style="overflow-x:auto">';
+    html += '<table style="border-collapse:collapse;font-size:0.5rem;white-space:nowrap;width:100%">';
 
     // 헤더 (월)
     html += '<thead><tr style="position:sticky;top:0;z-index:3;background:var(--bg-card)">';
@@ -75,7 +75,7 @@ function buildMonthlyHeatmap(containerId, schedRows) {
     allMonths.forEach(function (m) {
         var isToday = (m.label === todayLabel);
         var isQ = ((m.month) % 3 === 0);
-        html += '<th style="min-width:' + cellW + 'px;padding:4px 2px;text-align:center;font-weight:' + (isQ ? '700' : '400') + ';color:' + (isToday ? '#EF4444' : 'var(--text-muted)') + ';border-bottom:2px solid var(--border-default);font-size:' + (isQ ? '0.5rem' : '0.42rem') + '">' + m.label + '</th>';
+        html += '<th style="min-width:' + cellW + 'px;padding:4px 1px;text-align:center;font-weight:' + (isQ ? '700' : '400') + ';color:' + (isToday ? '#EF4444' : 'var(--text-muted)') + ';border-bottom:2px solid var(--border-default);font-size:' + (isQ ? '0.5rem' : '0.42rem') + '">' + m.label + '</th>';
     });
     html += '</tr></thead>';
 
@@ -94,8 +94,8 @@ function buildMonthlyHeatmap(containerId, schedRows) {
             var isToday = (m.label === todayLabel);
             var bg = isActive ? 'rgba(16,185,129,0.6)' : 'transparent';
             if (isActive && isToday) bg = 'rgba(239,68,68,0.7)';
-            html += '<td style="padding:1px;text-align:center;border-left:' + (m.month % 3 === 0 ? '1px solid rgba(148,163,184,0.12)' : 'none') + '">';
-            if (isActive) html += '<div style="width:' + (cellW - 4) + 'px;height:' + (rowH - 6) + 'px;background:' + bg + ';border-radius:2px;margin:0 auto" title="' + c.name + ' · ' + m.label + '"></div>';
+            html += '<td style="padding:1px 0;text-align:center;border-left:' + (m.month % 3 === 0 ? '1px solid rgba(148,163,184,0.12)' : 'none') + '">';
+            if (isActive) html += '<div style="width:' + (cellW - 2) + 'px;height:' + (rowH - 4) + 'px;background:' + bg + ';border-radius:2px;margin:0 auto" title="' + c.name + ' · ' + m.label + '"></div>';
             html += '</td>';
         });
         html += '</tr>';

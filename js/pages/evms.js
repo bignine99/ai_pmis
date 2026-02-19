@@ -331,7 +331,7 @@ function renderEvmsPage(container) {
         '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">' +
         '<div>' + Components.createKPICard('BAC (총예산)', Components.formatCurrency(metrics.bac), 'fa-bullseye', 'blue', '기준: ' + today, 'neutral') + '</div>' +
         '<div>' + Components.createKPICard('PV (계획가치)', Components.formatCurrency(metrics.pv), 'fa-calendar-days', 'info', '\u00A0', 'neutral') + '</div>' +
-        '<div>' + Components.createKPICard('EV (실현가치)', Components.formatCurrency(metrics.ev), 'fa-chart-line', 'green', '실행률 기반 (' + (metrics.progressStats ? metrics.progressStats.withProgress + '건 입력' : '') + ')', 'neutral') + '</div>' +
+        '<div>' + Components.createKPICard('EV (실현가치)', Components.formatCurrency(metrics.ev), 'fa-chart-line', 'green', '실행률 기반' + (metrics.progressStats && metrics.progressStats.withProgress ? ' (' + metrics.progressStats.withProgress + '건 입력)' : ''), 'neutral') + '</div>' +
         '<div>' + Components.createKPICard('AC (실제비용)', Components.formatCurrency(metrics.ac), 'fa-receipt', 'amber', '실투입 추정 (EV×1.05)', 'neutral') + '</div>' +
         '</div>' +
 
