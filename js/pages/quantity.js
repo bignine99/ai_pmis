@@ -731,24 +731,25 @@ function buildDocumentSamples(id) {
     var el = document.getElementById(id);
     if (!el) return;
 
+    var todayStr = new Date().toISOString().split('T')[0];
     var docs = [
         {
             title: '자재 승인 요청서', icon: 'fa-file-signature', color: '#3B82F6',
             desc: '현장 반입 전 자재의 품질/규격 승인을 요청하는 문서',
             fields: ['공사명', '자재명', '규격/사양', '제조사', '수량', 'KS인증 여부', '시험성적서 첨부', '사용 위치', '요청일', '승인자'],
-            sample: '공사명: OO현장 관사동 건축공사\n자재명: 레미콘 (25-27-150)\n제조사: OO레미콘(주)\n수량: 120㎥\nKS인증: KS F 4009\n사용위치: 관사동 2F 슬래브\n요청일: 2026-02-17'
+            sample: '공사명: OO현장 관사동 건축공사\n자재명: 레미콘 (25-27-150)\n제조사: OO레미콘(주)\n수량: 120㎥\nKS인증: KS F 4009\n사용위치: 관사동 2F 슬래브\n요청일: ' + todayStr
         },
         {
             title: '검수 조서', icon: 'fa-clipboard-check', color: '#10B981',
             desc: '반입된 자재의 수량 및 품질을 검수하여 기록하는 문서',
             fields: ['검수일', '자재명', '규격', '발주 수량', '입고 수량', '합격/불합격', '비고', '검수자', '확인자'],
-            sample: '검수일: 2026-02-17\n자재명: 철근 SD500 (D22)\n발주 수량: 50ton\n입고 수량: 50ton\n합격 여부: 합격\n검수자: 홍길동 (품질팀)'
+            sample: '검수일: ' + todayStr + '\n자재명: 철근 SD500 (D22)\n발주 수량: 50ton\n입고 수량: 50ton\n합격 여부: 합격\n검수자: 홍길동 (품질팀)'
         },
         {
             title: '자재 반출 확인서', icon: 'fa-truck-arrow-right', color: '#F59E0B',
             desc: '현장 외부로 자재 반출 시 사유와 수량을 기록하는 문서',
             fields: ['반출일', '자재명', '수량', '반출사유', '반출처', '확인자'],
-            sample: '반출일: 2026-02-17\n자재명: 잔여 거푸집 합판\n수량: 120장\n반출사유: 타 현장 전용\n확인자: 김현장 (공무팀)'
+            sample: '반출일: ' + todayStr + '\n자재명: 잔여 거푸집 합판\n수량: 120장\n반출사유: 타 현장 전용\n확인자: 김현장 (공무팀)'
         }
     ];
 

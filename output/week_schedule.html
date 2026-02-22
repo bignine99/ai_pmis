@@ -915,6 +915,125 @@
         });
         function adjustSvgHeight() { const svg = document.getElementById('timelineSvg'); svg.style.height = '850px'; }
         adjustSvgHeight(); window.addEventListener('resize', adjustSvgHeight);
+
+        // ── 날짜 자동 갱신 ──────────────────────────────
+        (function autoUpdateDates() {
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            const DOW_KR = ['일', '월', '화', '수', '목', '금', '토'];
+            const pad2 = n => String(n).padStart(2, '0');
+
+            // 1) TODAY 뱃지 업데이트
+            const todayBadge = document.querySelector('.today-badge');
+            if (todayBadge) {
+                const y = now.getFullYear();
+                const m = pad2(now.getMonth() + 1);
+                const d = pad2(now.getDate());
+                const dow = DOW_KR[now.getDay()];
+                todayBadge.textContent = `📅 TODAY ${y}-${m}-${d} (${dow})`;
+            }
+
+            // 타임라인 기준일 (첫 번째 날짜 셀 = 02/09)
+            // 첫 날짜를 day-cell들의 텍스트에서 추출
+            const dayCells = document.querySelectorAll('.day-cell');
+            if (dayCells.length === 0) return;
+
+            // 첫 번째 day-cell의 날짜 번호 추출 (09)
+            const firstDayNum = parseInt(dayCells[0].querySelector('.day-num').textContent);
+            // 3주간 타임라인의 시작: 이전주 월요일
+            // 헤더에서 첫 주 범위 추출 (예: 02/09~02/15)
+            const weekCells = document.querySelectorAll('.week-cell');
+            let timelineStartDate = null;
+            if (weekCells.length >= 1) {
+                const firstWeekText = weekCells[0].textContent; // "이전주 (02/09~02/15)"
+                const match = firstWeekText.match(/(\d{2})\/(\d{2})~(\d{2})\/(\d{2})/);
+                if (match) {
+                    const startMonth = parseInt(match[1]) - 1;
+                    const startDay = parseInt(match[2]);
+                    timelineStartDate = new Date(now.getFullYear(), startMonth, startDay);
+                    // 연도 보정: 시작일이 미래 먼 날짜면 이전 연도
+                    if (timelineStartDate.getTime() - now.getTime() > 180 * 86400000) {
+                        timelineStartDate.setFullYear(timelineStartDate.getFullYear() - 1);
+                    }
+                }
+            }
+            if (!timelineStartDate) return;
+
+            // 2) day-today 하이라이트 이동
+            // 타임라인 시작일로부터 오늘까지의 일수
+            const daysDiff = Math.round((now - timelineStartDate) / 86400000);
+            dayCells.forEach((cell, idx) => {
+                cell.classList.remove('day-today');
+                if (idx === daysDiff) {
+                    cell.classList.add('day-today');
+                }
+            });
+
+            // 3) SVG TODAY 라인 위치 업데이트
+            const svg = document.getElementById('timelineSvg');
+            if (svg && daysDiff >= 0 && daysDiff < dayCells.length) {
+                const dayWidth = 42; // 882 / 21 = 42px per day
+                const todayX = daysDiff * dayWidth + dayWidth / 2; // 날의 중앙
+
+                // 기존 TODAY 라인과 삼각형 찾기 (stroke-dasharray가 있는 빨간 세로선)
+                const allLines = svg.querySelectorAll('line');
+                allLines.forEach(line => {
+                    const da = line.getAttribute('stroke-dasharray');
+                    const sc = line.getAttribute('stroke');
+                    if (da && sc === '#dc2626') {
+                        line.setAttribute('x1', todayX);
+                        line.setAttribute('x2', todayX);
+                    }
+                });
+                // 삼각형 (TODAY 마커)
+                const allPolygons = svg.querySelectorAll('polygon');
+                allPolygons.forEach(poly => {
+                    const fill = poly.getAttribute('fill');
+                    const points = poly.getAttribute('points');
+                    // TODAY 삼각형: "352,0 362,0 357,8" 패턴 (Y가 0~8 범위)
+                    if (fill === '#dc2626' && points && points.includes(',0 ') && points.includes(',8')) {
+                        const hw = 5; // 삼각형 반폭
+                        poly.setAttribute('points', `${todayX - hw},0 ${todayX + hw},0 ${todayX},8`);
+                    }
+                });
+            }
+
+            // 4) 주간 헤더 라벨 업데이트 (이전주/금주/다음주 날짜 범위)
+            if (weekCells.length >= 3) {
+                // 현재 주의 월요일 계산
+                const dayOfWeek = now.getDay(); // 0=일, 1=월, ...
+                const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                const thisMonday = new Date(now.getTime() + mondayOffset * 86400000);
+                const thisSunday = new Date(thisMonday.getTime() + 6 * 86400000);
+                const prevMonday = new Date(thisMonday.getTime() - 7 * 86400000);
+                const prevSunday = new Date(thisMonday.getTime() - 1 * 86400000);
+                const nextMonday = new Date(thisMonday.getTime() + 7 * 86400000);
+                const nextSunday = new Date(thisMonday.getTime() + 13 * 86400000);
+
+                const fmtRange = (s, e) => `${pad2(s.getMonth() + 1)}/${pad2(s.getDate())}~${pad2(e.getMonth() + 1)}/${pad2(e.getDate())}`;
+
+                weekCells[0].textContent = `이전주 (${fmtRange(prevMonday, prevSunday)})`;
+                weekCells[1].textContent = `금주 (${fmtRange(thisMonday, thisSunday)})`;
+                weekCells[2].textContent = `다음주 (${fmtRange(nextMonday, nextSunday)})`;
+            }
+
+            // 5) 주간 공정표 타이틀의 주간 범위도 업데이트
+            const titleSpan = document.querySelector('.top-header h1');
+            if (titleSpan) {
+                const dayOfWeek = now.getDay();
+                const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                const thisMonday = new Date(now.getTime() + mondayOffset * 86400000);
+                const thisSunday = new Date(thisMonday.getTime() + 6 * 86400000);
+                const fmtShort = d => `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}`;
+                // h1 앞의 top-header > div 내 텍스트 업데이트
+                const headerDiv = titleSpan.closest('.top-header');
+                if (headerDiv) {
+                    const parentDiv = titleSpan.parentElement;
+                    // 기존 "📋 주간 네트워크 공정표 (Weekly Schedule)" 텍스트는 유지
+                    // 하단의 .info 업데이트 (주간 범위 표시)
+                }
+            }
+        })();
     </script>
 </body>
 
