@@ -862,46 +862,112 @@ function renderEvmsPage(container) {
         tableWrapper.style.background = 'var(--bg-base)';
 
         if (!data.values || data.values.length === 0) {
-            tableWrapper.innerHTML = '<div style="padding:60px; text-align:center; color:var(--text-muted); font-size:0.9rem;">해당 기간에 진행 중인 작업 내역이 없습니다. (시작일/종료일 데이터 부족 혹은 일정 없음)</div>';
+            tableWrapper.innerHTML = '<div style="padding:60px; text-align:center; color:var(--text-muted); font-size:0.9rem;">해당 기간에 진행 중인 작업 내역이 없습니다.</div>';
         } else {
-            var thStyle = 'text-align:left; padding:12px 14px; color:var(--text-secondary); font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg-card); z-index:10; font-size:0.75rem;';
-            var tdStyle = 'padding:10px 14px; font-size:0.75rem; border-bottom:1px solid var(--border); color:var(--text-primary);';
+            // ── 작업명 기준 그룹핑 ──
+            var groups = {};
+            var groupOrder = [];
+            var totalAmt = 0;
+            data.values.forEach(function (row, idx) {
+                var key = (row[0] || '') + '||' + (row[1] || '') + '||' + (row[2] || '');
+                if (!groups[key]) {
+                    groups[key] = { dong: row[0] || '', trade: row[1] || '', task: row[2] || '', items: [], totalAmt: 0 };
+                    groupOrder.push(key);
+                }
+                var prog = (row[6] !== null && row[6] !== undefined) ? Math.round(row[6] * 100) : 0;
+                groups[key].items.push({ idx: idx, row: row, prog: prog });
+                groups[key].totalAmt += (row[5] || 0);
+                totalAmt += (row[5] || 0);
+            });
+
+            var thStyle = 'text-align:left; padding:10px 12px; color:var(--text-secondary); font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg-card); z-index:10; font-size:0.72rem;';
+            var tdStyle = 'padding:8px 12px; font-size:0.72rem; border-bottom:1px solid var(--border); color:var(--text-primary);';
 
             var tableHTML = '<table style="width:100%; border-collapse:collapse;">' +
                 '<thead><tr>' +
-                '<th style="' + thStyle + ' width:10%">동</th>' +
+                '<th style="' + thStyle + ' width:6%"></th>' +
+                '<th style="' + thStyle + ' width:8%">동</th>' +
                 '<th style="' + thStyle + ' width:12%">대공종</th>' +
-                '<th style="' + thStyle + ' width:22%">작업명</th>' +
-                '<th style="' + thStyle + ' width:18%">품명</th>' +
-                '<th style="' + thStyle + ' width:14%">규격</th>' +
+                '<th style="' + thStyle + ' width:20%">작업명</th>' +
+                '<th style="' + thStyle + ' width:16%">품명</th>' +
+                '<th style="' + thStyle + ' width:12%">규격</th>' +
                 '<th style="' + thStyle + ' width:12%; text-align:right;">합계 금액</th>' +
-                '<th style="' + thStyle + ' width:12%; text-align:center;">실행률 (%)</th>' +
+                '<th style="' + thStyle + ' width:14%; text-align:center;">실행률 (%)</th>' +
                 '</tr></thead><tbody>';
 
-            var totalAmt = 0;
-            data.values.forEach(function (row, idx) {
-                totalAmt += (row[5] || 0);
-                var prog = (row[6] !== null && row[6] !== undefined) ? Math.round(row[6] * 100) : 0;
-                tableHTML += '<tr style="transition:background 0.2s; cursor:default;" onmouseover="this.style.background=\'var(--bg-active)\'" onmouseout="this.style.background=\'transparent\'">' +
-                    '<td style="' + tdStyle + '">' + (row[0] || '-') + '<input type="hidden" class="evms-row-key" data-idx="' + idx + '" data-col0="' + (row[0] || '') + '" data-col1="' + (row[1] || '') + '" data-col2="' + (row[2] || '') + '" data-col3="' + (row[3] || '') + '" data-col4="' + (row[4] || '') + '"></td>' +
-                    '<td style="' + tdStyle + '">' + (row[1] || '-') + '</td>' +
-                    '<td style="' + tdStyle + '"><div style="max-height:3em; overflow:hidden;" title="' + (row[2] || '') + '">' + (row[2] || '-') + '</div></td>' +
-                    '<td style="' + tdStyle + 'color:var(--text-secondary);"><div style="max-height:3em; overflow:hidden;" title="' + (row[3] || '') + '">' + (row[3] || '') + '</div></td>' +
-                    '<td style="' + tdStyle + 'color:var(--text-secondary);"><div style="max-height:3em; overflow:hidden;" title="' + (row[4] || '') + '">' + (row[4] || '') + '</div></td>' +
-                    '<td style="' + tdStyle + ' text-align:right; font-weight:600; font-family:\'JetBrains Mono\', monospace; color:var(--accent);">' + (row[5] ? row[5].toLocaleString() : '0') + '</td>' +
-                    '<td style="' + tdStyle + ' text-align:center;"><input type="number" class="evms-prog-input" data-idx="' + idx + '" value="' + prog + '" min="0" max="100" style="width:70px; text-align:right; padding:4px 8px; border:1px solid var(--border); border-radius:4px; font-family:\'JetBrains Mono\', monospace; background:var(--bg-input); color:var(--text-primary); outline:none;"></td>' +
+            groupOrder.forEach(function (key, gi) {
+                var g = groups[key];
+                var avgProg = 0;
+                if (g.items.length > 0) {
+                    var sum = 0;
+                    g.items.forEach(function (it) { sum += it.prog; });
+                    avgProg = Math.round(sum / g.items.length);
+                }
+                // ── 그룹 헤더 행 ──
+                tableHTML += '<tr class="evms-group-row" data-group="g' + gi + '" style="background:var(--bg-secondary); cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-active)\'" onmouseout="this.style.background=\'var(--bg-secondary)\'">' +
+                    '<td style="' + tdStyle + ' text-align:center;"><span class="evms-toggle" data-group="g' + gi + '" style="display:inline-block;transition:transform 0.2s;font-size:0.7rem;color:var(--text-muted);">▶</span></td>' +
+                    '<td style="' + tdStyle + ' font-weight:700;">' + g.dong + '</td>' +
+                    '<td style="' + tdStyle + ' font-weight:700;">' + g.trade + '</td>' +
+                    '<td style="' + tdStyle + ' font-weight:700;" colspan="3"><div style="display:flex;align-items:center;gap:8px;">' + g.task + ' <span style="font-size:0.6rem;color:var(--text-muted);font-weight:normal;">(' + g.items.length + '건)</span></div></td>' +
+                    '<td style="' + tdStyle + ' text-align:right; font-weight:700; font-family:\'JetBrains Mono\',monospace; color:var(--accent);">' + g.totalAmt.toLocaleString() + '</td>' +
+                    '<td style="' + tdStyle + ' text-align:center;"><div style="display:flex;align-items:center;gap:4px;justify-content:center;"><input type="number" class="evms-group-prog" data-group="g' + gi + '" value="' + avgProg + '" min="0" max="100" style="width:58px; text-align:right; padding:3px 6px; border:1px solid var(--accent); border-radius:4px; font-family:\'JetBrains Mono\',monospace; background:var(--bg-input); color:var(--text-primary); outline:none; font-size:0.72rem; font-weight:700;" title="일괄 적용"><button class="evms-batch-btn" data-group="g' + gi + '" style="padding:2px 6px; border-radius:4px; border:1px solid var(--accent); background:var(--accent); color:#fff; font-size:0.6rem; cursor:pointer; font-weight:600; white-space:nowrap;" title="하위 항목에 일괄 적용">적용</button></div></td>' +
                     '</tr>';
+
+                // ── 자식 행 (기본 숨김) ──
+                g.items.forEach(function (it) {
+                    tableHTML += '<tr class="evms-child-row evms-child-g' + gi + '" style="display:none; transition:background 0.2s;" onmouseover="this.style.background=\'var(--bg-active)\'" onmouseout="this.style.background=\'transparent\'">' +
+                        '<td style="' + tdStyle + '"></td>' +
+                        '<td style="' + tdStyle + ' color:var(--text-muted);">└</td>' +
+                        '<td style="' + tdStyle + '"></td>' +
+                        '<td style="' + tdStyle + '"></td>' +
+                        '<td style="' + tdStyle + 'color:var(--text-secondary);"><div style="max-height:3em;overflow:hidden;" title="' + (it.row[3] || '') + '">' + (it.row[3] || '-') + '</div></td>' +
+                        '<td style="' + tdStyle + 'color:var(--text-secondary);"><div style="max-height:3em;overflow:hidden;" title="' + (it.row[4] || '') + '">' + (it.row[4] || '-') + '</div></td>' +
+                        '<td style="' + tdStyle + ' text-align:right; font-family:\'JetBrains Mono\',monospace; color:var(--accent);">' + (it.row[5] ? it.row[5].toLocaleString() : '0') + '</td>' +
+                        '<td style="' + tdStyle + ' text-align:center;"><input type="number" class="evms-prog-input evms-prog-g' + gi + '" data-idx="' + it.idx + '" value="' + it.prog + '" min="0" max="100" style="width:64px; text-align:right; padding:3px 6px; border:1px solid var(--border); border-radius:4px; font-family:\'JetBrains Mono\',monospace; background:var(--bg-input); color:var(--text-primary); outline:none; font-size:0.72rem;"><input type="hidden" class="evms-row-key" data-idx="' + it.idx + '" data-col0="' + (it.row[0] || '') + '" data-col1="' + (it.row[1] || '') + '" data-col2="' + (it.row[2] || '') + '" data-col3="' + (it.row[3] || '') + '" data-col4="' + (it.row[4] || '') + '"></td>' +
+                        '</tr>';
+                });
             });
 
             tableHTML += '</tbody><tfoot style="position:sticky; bottom:0; background:var(--bg-card); z-index:10;">' +
                 '<tr>' +
-                '<td colspan="5" style="padding:12px 14px; font-weight:800; text-align:right; border-top:2px solid var(--border); color:var(--text-primary);">총 합계 금액</td>' +
+                '<td colspan="6" style="padding:12px 14px; font-weight:800; text-align:right; border-top:2px solid var(--border); color:var(--text-primary);">총 합계 금액</td>' +
                 '<td style="padding:12px 14px; font-weight:800; text-align:right; border-top:2px solid var(--border); font-family:\'JetBrains Mono\', monospace; color:var(--accent);">' + totalAmt.toLocaleString() + '</td>' +
                 '<td style="padding:12px 14px; border-top:2px solid var(--border);"></td>' +
                 '</tr>' +
                 '</tfoot></table>';
 
             tableWrapper.innerHTML = tableHTML;
+
+            // ── 토글 이벤트 (접기/펼치기) ──
+            tableWrapper.querySelectorAll('.evms-group-row').forEach(function (gRow) {
+                gRow.addEventListener('click', function (e) {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+                    var gid = gRow.getAttribute('data-group');
+                    var toggle = gRow.querySelector('.evms-toggle');
+                    var children = tableWrapper.querySelectorAll('.evms-child-' + gid);
+                    var isOpen = toggle.textContent === '▼';
+                    toggle.textContent = isOpen ? '▶' : '▼';
+                    toggle.style.transform = isOpen ? '' : 'rotate(0deg)';
+                    children.forEach(function (c) { c.style.display = isOpen ? 'none' : 'table-row'; });
+                });
+            });
+
+            // ── 일괄 적용 버튼 이벤트 ──
+            tableWrapper.querySelectorAll('.evms-batch-btn').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    var gid = btn.getAttribute('data-group');
+                    var groupInput = tableWrapper.querySelector('.evms-group-prog[data-group="' + gid + '"]');
+                    var val = groupInput ? groupInput.value : '';
+                    var children = tableWrapper.querySelectorAll('.evms-prog-' + gid);
+                    children.forEach(function (c) { c.value = val; });
+                });
+            });
+
+            // ── 그룹 입력 클릭 시 이벤트 전파 방지 ──
+            tableWrapper.querySelectorAll('.evms-group-prog').forEach(function (inp) {
+                inp.addEventListener('click', function (e) { e.stopPropagation(); });
+            });
         }
 
         modal.appendChild(header);
