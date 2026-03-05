@@ -70,6 +70,23 @@ async function initDatabase(dbUrl) {
         const rowCount = db.exec("SELECT COUNT(*) FROM evms");
         console.log('[DB] Step C: evms table row count:', rowCount[0]?.values[0][0]);
 
+        // Step D: 데이터 마이그레이션 — 잘못된 종료일 수정
+        try {
+            var projEndResult = db.exec("SELECT MAX(WHEN2종료일) FROM evms WHERE WHEN2종료일 IS NOT NULL AND WHEN2종료일 != ''");
+            if (projEndResult.length > 0 && projEndResult[0].values[0][0]) {
+                var projEndStr = projEndResult[0].values[0][0];
+                var projEndDate = new Date(projEndStr);
+                projEndDate.setMonth(projEndDate.getMonth() - 1);
+                var fixedEnd = projEndDate.toISOString().split('T')[0];
+                // 본관동 공통가설공사, 공통 토공의 종료일이 준공일보다 너무 이른 경우 수정
+                db.run("UPDATE evms SET WHEN2종료일 = '" + fixedEnd + "' WHERE WHERE2_동='01_본관동' AND HOW3_작업명 LIKE '%공통가설공사%' AND WHEN2종료일 < '" + fixedEnd + "'");
+                db.run("UPDATE evms SET WHEN2종료일 = '" + fixedEnd + "' WHERE WHERE2_동='00_공통' AND HOW3_작업명 LIKE '%토공%' AND WHEN2종료일 < '" + fixedEnd + "'");
+                console.log('[DB] Step D: Data migration applied (end date fix to', fixedEnd, ')');
+            }
+        } catch (migErr) {
+            console.warn('[DB] Step D: Migration skipped:', migErr.message);
+        }
+
         return true;
     } catch (error) {
         console.error('[DB] Database initialization failed:', error.message);

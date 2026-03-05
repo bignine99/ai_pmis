@@ -1003,6 +1003,15 @@ function renderEvmsPage(container) {
                 // UI block 방지를 위해 setTimeout 내에서 처리
                 setTimeout(function () {
                     try {
+                        // 0. 그룹 입력값을 자식에 자동 적용
+                        tableWrapper.querySelectorAll('.evms-group-prog').forEach(function (gInp) {
+                            var gid = gInp.getAttribute('data-group');
+                            var val = gInp.value;
+                            tableWrapper.querySelectorAll('.evms-prog-' + gid).forEach(function (c) {
+                                c.value = val;
+                            });
+                        });
+
                         // 1. 모든 입력된값 수집
                         var inputs = tableWrapper.querySelectorAll('.evms-prog-input');
                         var sqls = [];
