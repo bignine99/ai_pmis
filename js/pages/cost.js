@@ -91,6 +91,12 @@ function renderCostPage(container) {
     var mechTrades = filterTop8(DB.getCostByTradeFiltered('D'));
 
     container.innerHTML =
+        // ════ 상단 컨트롤 영역 ════
+        '<div style="display:flex; justify-content:flex-end; margin-bottom:12px;">' +
+        '<button id="cost-this-week-btn" class="glass-btn btn-primary" style="background:#3B82F6; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-weight:600; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:6px; transition:transform 0.1s; box-shadow:0 4px 6px -1px rgba(59, 130, 246, 0.3);">' +
+        '<i class="fa-solid fa-list-check"></i> 금주의 작업목록 보기' +
+        '</button>' +
+        '</div>' +
 
         // ════ ROW 1: 3개 핵심 KPI 카드 ════
         '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">' +
@@ -477,6 +483,124 @@ function renderCostPage(container) {
     renderHBar('cost-civil-bar', civilTrades, ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5', '#ECFDF5', '#86efac', '#4ade80']);
     renderHBar('cost-land-bar', landTrades, ['#F59E0B', '#FBBF24', '#FCD34D', '#FDE68A', '#FEF3C7', '#FFFBEB', '#fbbf24', '#f59e0b']);
     renderHBar('cost-mech-bar', mechTrades, ['#EF4444', '#F87171', '#FCA5A5', '#FECACA', '#FEE2E2', '#FEF2F2', '#fb923c', '#f97316']);
+
+    // ── 금주의 작업목록 버튼 이벤트 ──
+    var weekBtn = document.getElementById('cost-this-week-btn');
+    if (weekBtn) {
+        weekBtn.addEventListener('click', showThisWeekTasks);
+    }
+
+    function showThisWeekTasks() {
+        var today = new Date();
+        var day = today.getDay();
+        var diff = today.getDate() - day + (day === 0 ? -6 : 1); // Monday
+        var monday = new Date(today.getTime());
+        monday.setDate(diff);
+        var sunday = new Date(today.getTime());
+        sunday.setDate(diff + 6);
+
+        var sd = monday.toISOString().slice(0, 10);
+        var ed = sunday.toISOString().slice(0, 10);
+
+        var valid = "WHEN1_시작일 IS NOT NULL AND WHEN1_시작일 != '' AND WHEN2종료일 IS NOT NULL AND WHEN2종료일 != ''";
+        var sql = "SELECT WHERE2_동, HOW2_대공종, HOW3_작업명, HOW4_품명, HOW5_규격, SUM(R10_합계_금액) as amt " +
+            "FROM evms WHERE " + valid + " " +
+            "AND WHEN1_시작일 <= '" + ed + "' AND WHEN2종료일 >= '" + sd + "' " +
+            "GROUP BY WHERE2_동, HOW2_대공종, HOW3_작업명, HOW4_품명, HOW5_규격 " +
+            "ORDER BY WHERE2_동, HOW2_대공종, HOW3_작업명";
+
+        var data = DB.runQuery(sql);
+
+        var overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.right = '0';
+        overlay.style.bottom = '0';
+        overlay.style.background = 'rgba(0,0,0,0.6)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = '9999';
+
+        var modal = document.createElement('div');
+        modal.className = 'glass-card';
+        modal.style.width = '85%';
+        modal.style.maxWidth = '1100px';
+        modal.style.height = '80vh';
+        modal.style.display = 'flex';
+        modal.style.flexDirection = 'column';
+        modal.style.padding = '20px';
+        modal.style.background = 'var(--bg-glass)';
+        modal.style.backdropFilter = 'blur(16px)';
+        modal.style.border = '1px solid rgba(255,255,255,0.1)';
+        modal.style.borderRadius = '12px';
+        modal.style.animation = 'fadeIn 0.2s ease';
+
+        var header = document.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        header.style.marginBottom = '20px';
+        header.innerHTML = '<h3 style="margin:0; font-size:1.2rem; color:var(--text-primary); display:flex; align-items:center gap:8px;">' +
+            '<i class="fa-solid fa-list-check" style="color:#3B82F6; margin-right:8px;"></i> 금주의 작업목록 (' + sd + ' ~ ' + ed + ')' +
+            '<span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal; margin-left:12px; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px;">조회 건수: ' + (data.values ? data.values.length : 0) + '건</span></h3>' +
+            '<button id="close-week-modal" style="background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; padding:4px; transition:color 0.2s;"><i class="fa-solid fa-times"></i></button>';
+
+        var tableWrapper = document.createElement('div');
+        tableWrapper.style.flex = '1';
+        tableWrapper.style.overflowY = 'auto';
+        tableWrapper.style.border = '1px solid rgba(148,163,184,0.1)';
+        tableWrapper.style.borderRadius = '8px';
+        tableWrapper.style.background = 'rgba(15,23,42,0.4)';
+
+        if (!data.values || data.values.length === 0) {
+            tableWrapper.innerHTML = '<div style="padding:60px; text-align:center; color:var(--text-muted); font-size:0.9rem;">해당 기간에 진행 중인 작업 내역이 없습니다. (시작일/종료일 데이터 부족 혹은 일정 없음)</div>';
+        } else {
+            var thStyle = 'text-align:left; padding:12px 14px; color:var(--text-secondary); font-weight:700; border-bottom:1px solid rgba(148,163,184,0.1); position:sticky; top:0; background:rgba(30,41,59,0.95); backdrop-filter:blur(8px); z-index:10; font-size:0.75rem;';
+            var tdStyle = 'padding:10px 14px; font-size:0.75rem; border-bottom:1px solid rgba(148,163,184,0.06); color:var(--text-primary);';
+
+            var tableHTML = '<table style="width:100%; border-collapse:collapse;">' +
+                '<thead><tr>' +
+                '<th style="' + thStyle + ' width:10%">동</th>' +
+                '<th style="' + thStyle + ' width:15%">대공종</th>' +
+                '<th style="' + thStyle + ' width:25%">작업명</th>' +
+                '<th style="' + thStyle + ' width:20%">품명</th>' +
+                '<th style="' + thStyle + ' width:15%">규격</th>' +
+                '<th style="' + thStyle + ' width:15%; text-align:right;">합계 금액</th>' +
+                '</tr></thead><tbody>';
+
+            var totalAmt = 0;
+            data.values.forEach(function (row) {
+                totalAmt += (row[5] || 0);
+                tableHTML += '<tr style="transition:background 0.2s; cursor:default;" onmouseover="this.style.background=\'rgba(255,255,255,0.04)\'" onmouseout="this.style.background=\'transparent\'">' +
+                    '<td style="' + tdStyle + '">' + (row[0] || '-') + '</td>' +
+                    '<td style="' + tdStyle + '">' + (row[1] || '-') + '</td>' +
+                    '<td style="' + tdStyle + '"><div style="max-height:3em; overflow:hidden;" title="' + (row[2] || '') + '">' + (row[2] || '-') + '</div></td>' +
+                    '<td style="' + tdStyle + 'color:var(--text-secondary);"><div style="max-height:3em; overflow:hidden;" title="' + (row[3] || '') + '">' + (row[3] || '') + '</div></td>' +
+                    '<td style="' + tdStyle + 'color:var(--text-secondary);">' + (row[4] || '') + '</td>' +
+                    '<td style="' + tdStyle + 'text-align:right; font-weight:700; color:#10B981;">' + Components.formatCurrency(row[5] || 0) + '</td>' +
+                    '</tr>';
+            });
+
+            // 합계 풋터
+            tableHTML += '</tbody><tfoot style="position:sticky; bottom:0; background:rgba(15,23,42,0.95); backdrop-filter:blur(8px);">' +
+                '<tr><td colspan="5" style="padding:14px; text-align:right; font-weight:700; color:var(--text-primary); border-top:1px solid rgba(148,163,184,0.2);">전체 총액</td>' +
+                '<td style="padding:14px; text-align:right; font-weight:800; color:#3B82F6; font-size:0.9rem; border-top:1px solid rgba(148,163,184,0.2);">' + Components.formatCurrency(totalAmt) + '</td>' +
+                '</tr></tfoot></table>';
+
+            tableWrapper.innerHTML = tableHTML;
+        }
+
+        modal.appendChild(header);
+        modal.appendChild(tableWrapper);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        var closeBtn = document.getElementById('close-week-modal');
+        if (closeBtn) closeBtn.addEventListener('click', function () { document.body.removeChild(overlay); });
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) document.body.removeChild(overlay); });
+    }
 }
 
 window.renderCostPage = renderCostPage;
