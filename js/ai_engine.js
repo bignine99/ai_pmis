@@ -18,7 +18,7 @@
     var CONFIG = {
         model: 'gemini-2.5-flash-lite',
         baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/',
-        apiKey: null,
+        apiKey: localStorage.getItem('gemini-api-key') || null,
         temperature: 0.1,
         maxTokens: 8192
     };
@@ -918,7 +918,6 @@
             '컬럼: WHO(업체), WHAT(용도), WHERE(위치), WHEN(일정), HOW(공종), R(비용)\n' +
             '■ 오늘 날짜: ' + today();
 
-        var url = CONFIG.baseUrl + CONFIG.model + ':generateContent?key=' + CONFIG.apiKey;
         var body = {
             systemInstruction: { parts: [{ text: analysisPrompt }] },
             contents: [{ role: 'user', parts: [{ text: dataContext }] }],
@@ -927,11 +926,27 @@
 
         try {
             console.log('[AI] Pass 2: CM 컨설팅 분석 요청 (enhanced)...');
-            var resp = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
+            var resp;
+            try {
+                // Vercel Serverless Function 우선 호출 (보안 우수)
+                resp = await fetch('/api/gemini', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-gemini-api-key': CONFIG.apiKey
+                    },
+                    body: JSON.stringify({ model: CONFIG.model, body: body })
+                });
+                if (resp.status === 404) throw new Error('Local fallback');
+            } catch (e) {
+                // 서버리스가 없는 로컬 테스트 환경일 경우 직결 폴백
+                var url = CONFIG.baseUrl + CONFIG.model + ':generateContent?key=' + CONFIG.apiKey;
+                resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+            }
 
             if (!resp.ok) {
                 console.error('[AI] Pass 2 HTTP error:', resp.status);
@@ -995,8 +1010,6 @@
 
         for (var mi = 0; mi < models.length; mi++) {
             var modelName = models[mi];
-            var url = CONFIG.baseUrl + modelName + ':generateContent?key=' + CONFIG.apiKey;
-
             // 대화 맥락을 포함한 contents 구성
             var contents = [];
             // 이전 대화 기록 추가
@@ -1019,11 +1032,27 @@
 
             try {
                 console.log('[AI] Trying model:', modelName, '(' + (mi + 1) + '/' + models.length + ')');
-                var resp = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
+                var resp;
+                try {
+                    // Vercel Serverless Function 우선 호출 (보안 우수)
+                    resp = await fetch('/api/gemini', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-gemini-api-key': CONFIG.apiKey
+                        },
+                        body: JSON.stringify({ model: modelName, body: body })
+                    });
+                    if (resp.status === 404) throw new Error('Local fallback');
+                } catch (e) {
+                    // 서버리스가 없는 로컬 테스트 환경일 경우 직결 폴백
+                    var url = CONFIG.baseUrl + modelName + ':generateContent?key=' + CONFIG.apiKey;
+                    resp = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                }
 
                 if (!resp.ok) {
                     var errText = await resp.text();

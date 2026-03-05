@@ -23,9 +23,9 @@
     var apiToggle = document.getElementById('landing-api-toggle');
     var startBtn = document.getElementById('landing-start-btn');
 
-    // 저장된 API 키 복원
     var savedKey = localStorage.getItem('gemini-api-key') || '';
-    if (savedKey && apiKeyInput) apiKeyInput.value = savedKey;
+    // 보안을 위해 입력 필드에 기존 키를 노출하지 않음
+    if (apiKeyInput) apiKeyInput.value = '';
 
     // 비밀번호 토글
     if (apiToggle && apiKeyInput) {
@@ -39,6 +39,13 @@
     // ── 대시보드 시작 버튼 ──
     if (startBtn) {
         startBtn.addEventListener('click', function () {
+            launchDashboard();
+        });
+    }
+
+    var mainBtn = document.getElementById('landing-main-btn');
+    if (mainBtn) {
+        mainBtn.addEventListener('click', function () {
             launchDashboard();
         });
     }
@@ -61,23 +68,87 @@
         }
 
         // 버튼 상태 변경
-        if (startBtn) {
-            var textEl = startBtn.querySelector('.landing-start-text');
-            var loadEl = startBtn.querySelector('.landing-start-loading');
-            if (textEl) textEl.style.display = 'none';
-            if (loadEl) loadEl.style.display = 'flex';
-            startBtn.disabled = true;
-            startBtn.style.pointerEvents = 'none';
+        function setBtnLoading(isLoading) {
+            if (startBtn) {
+                var textEl = startBtn.querySelector('.landing-start-text');
+                var loadEl = startBtn.querySelector('.landing-start-loading');
+                if (textEl) textEl.style.display = isLoading ? 'none' : '';
+                if (loadEl) loadEl.style.display = isLoading ? 'flex' : 'none';
+                startBtn.disabled = isLoading;
+                startBtn.style.pointerEvents = isLoading ? 'none' : '';
+            }
+            if (mainBtn) {
+                mainBtn.disabled = isLoading;
+                if (isLoading) {
+                    mainBtn.dataset.originalHtml = mainBtn.innerHTML;
+                    mainBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 확인 중...';
+                    mainBtn.style.opacity = '0.7';
+                } else {
+                    if (mainBtn.dataset.originalHtml) mainBtn.innerHTML = mainBtn.dataset.originalHtml;
+                    mainBtn.style.opacity = '1';
+                }
+            }
+            if (apiKeyInput) apiKeyInput.disabled = isLoading;
         }
 
-        // API 키 저장
+        setBtnLoading(true);
+
+        // API 키 확인 및 검증
         var key = apiKeyInput ? apiKeyInput.value.trim() : '';
-        if (key) {
-            localStorage.setItem('gemini-api-key', key);
-            // AI 엔진에 키 전달
-            if (window.AIEngine && typeof window.AIEngine.setApiKey === 'function') {
-                window.AIEngine.setApiKey(key);
+        if (!key) {
+            key = localStorage.getItem('gemini-api-key') || '';
+        }
+
+        if (!key) {
+            alert("서비스 사용을 위해 Gemini API 키를 입력해 주세요. (발급받기 링크 참조)");
+            setBtnLoading(false);
+            return;
+        }
+
+        // 키 유효성 검증
+        try {
+            var validateResp;
+            var validateBody = JSON.stringify({
+                model: 'gemini-2.5-flash-lite',
+                body: { contents: [{ role: 'user', parts: [{ text: "hi" }] }] }
+            });
+
+            try {
+                // 서버리스 우선
+                validateResp = await fetch('/api/gemini', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-gemini-api-key': key },
+                    body: validateBody
+                });
+                if (validateResp.status === 404) throw new Error("Fallback");
+            } catch (e) {
+                var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + key;
+                validateResp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: validateBody
+                });
             }
+
+            if (!validateResp.ok) {
+                var errData = await validateResp.json();
+                var msg = errData.error?.message || errData.error || validateResp.status;
+                alert('입력된 API 키가 유효하지 않거나 오류가 발생했습니다.\n새로운 키를 확인해주세요.\n(에러: ' + msg + ')');
+                setBtnLoading(false);
+                if (apiKeyInput) apiKeyInput.value = '';
+                localStorage.removeItem('gemini-api-key');
+                return;
+            }
+        } catch (err) {
+            alert('API 키 검증 중 통신 오류가 발생했습니다.');
+            setBtnLoading(false);
+            return;
+        }
+
+        // 검증 성공 시에만 키 저장
+        localStorage.setItem('gemini-api-key', key);
+        if (window.AIEngine && typeof window.AIEngine.setApiKey === 'function') {
+            window.AIEngine.setApiKey(key);
         }
 
         // DB 로드
@@ -256,7 +327,7 @@
         handleRoute();
 
         // API 키 AI 엔진에 적용
-        var storedKey = localStorage.getItem('gemini-api-key');
+        var storedKey = localStorage.getItem('gemini-api-key') || '';
         if (storedKey && window.AIEngine && window.AIEngine.setApiKey) {
             window.AIEngine.setApiKey(storedKey);
             console.log('[APP] Gemini API key restored from localStorage');

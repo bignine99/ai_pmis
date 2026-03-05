@@ -115,7 +115,8 @@ function renderAiAnalysisPage(container) {
             '<button class="ai-settings-btn" id="ai-clear-chat" title="대화 초기화" style="margin-right:2px">' +
             '<i class="fa-solid fa-trash-can"></i>' +
             '</button>' +
-            '<button class="ai-settings-btn" id="ai-settings-btn" title="Gemini API Key 설정">' +
+            '<button class="ai-settings-btn" id="ai-settings-btn" title="Gemini API Key 설정"' +
+            (AIEngine.hasApiKey() ? ' style="color:#10B981"' : '') + '>' +
             '<i class="fa-solid fa-key"></i>' +
             '</button>' +
             '</div>' +
