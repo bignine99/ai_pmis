@@ -525,13 +525,13 @@ function renderCostPage(container) {
 
         var modal = document.createElement('div');
         modal.className = 'glass-card';
-        modal.style.width = '85%';
-        modal.style.maxWidth = '1100px';
-        modal.style.height = '80vh';
+        modal.style.width = '96%';
+        modal.style.maxWidth = '1600px';
+        modal.style.height = '85vh';
         modal.style.display = 'flex';
         modal.style.flexDirection = 'column';
         modal.style.padding = '20px';
-        modal.style.background = 'var(--bg-glass)';
+        modal.style.background = 'rgba(15, 23, 42, 0.95)';
         modal.style.backdropFilter = 'blur(16px)';
         modal.style.border = '1px solid rgba(255,255,255,0.1)';
         modal.style.borderRadius = '12px';
@@ -542,10 +542,10 @@ function renderCostPage(container) {
         header.style.justifyContent = 'space-between';
         header.style.alignItems = 'center';
         header.style.marginBottom = '20px';
-        header.innerHTML = '<h3 style="margin:0; font-size:1.2rem; color:var(--text-primary); display:flex; align-items:center gap:8px;">' +
+        header.innerHTML = '<h3 style="margin:0; font-size:1.2rem; color:#f8fafc; display:flex; align-items:center gap:8px;">' +
             '<i class="fa-solid fa-list-check" style="color:#3B82F6; margin-right:8px;"></i> 금주의 작업목록 (' + sd + ' ~ ' + ed + ')' +
-            '<span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal; margin-left:12px; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px;">조회 건수: ' + (data.values ? data.values.length : 0) + '건</span></h3>' +
-            '<button id="close-week-modal" style="background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; padding:4px; transition:color 0.2s;"><i class="fa-solid fa-times"></i></button>';
+            '<span style="font-size:0.75rem; color:#94a3b8; font-weight:normal; margin-left:12px; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px;">조회 건수: ' + (data.values ? data.values.length : 0) + '건</span></h3>' +
+            '<button id="close-week-modal" style="background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; padding:4px; transition:color 0.2s;"><i class="fa-solid fa-times"></i></button>';
 
         var tableWrapper = document.createElement('div');
         tableWrapper.style.flex = '1';
@@ -555,10 +555,10 @@ function renderCostPage(container) {
         tableWrapper.style.background = 'rgba(15,23,42,0.4)';
 
         if (!data.values || data.values.length === 0) {
-            tableWrapper.innerHTML = '<div style="padding:60px; text-align:center; color:var(--text-muted); font-size:0.9rem;">해당 기간에 진행 중인 작업 내역이 없습니다. (시작일/종료일 데이터 부족 혹은 일정 없음)</div>';
+            tableWrapper.innerHTML = '<div style="padding:60px; text-align:center; color:#64748b; font-size:0.9rem;">해당 기간에 진행 중인 작업 내역이 없습니다. (시작일/종료일 데이터 부족 혹은 일정 없음)</div>';
         } else {
-            var thStyle = 'text-align:left; padding:12px 14px; color:var(--text-secondary); font-weight:700; border-bottom:1px solid rgba(148,163,184,0.1); position:sticky; top:0; background:rgba(30,41,59,0.95); backdrop-filter:blur(8px); z-index:10; font-size:0.75rem;';
-            var tdStyle = 'padding:10px 14px; font-size:0.75rem; border-bottom:1px solid rgba(148,163,184,0.06); color:var(--text-primary);';
+            var thStyle = 'text-align:left; padding:12px 14px; color:#94a3b8; font-weight:700; border-bottom:1px solid rgba(148,163,184,0.1); position:sticky; top:0; background:rgba(30,41,59,0.95); backdrop-filter:blur(8px); z-index:10; font-size:0.75rem;';
+            var tdStyle = 'padding:10px 14px; font-size:0.75rem; border-bottom:1px solid rgba(148,163,184,0.06); color:#f8fafc;';
 
             var tableHTML = '<table style="width:100%; border-collapse:collapse;">' +
                 '<thead><tr>' +
@@ -577,16 +577,16 @@ function renderCostPage(container) {
                     '<td style="' + tdStyle + '">' + (row[0] || '-') + '</td>' +
                     '<td style="' + tdStyle + '">' + (row[1] || '-') + '</td>' +
                     '<td style="' + tdStyle + '"><div style="max-height:3em; overflow:hidden;" title="' + (row[2] || '') + '">' + (row[2] || '-') + '</div></td>' +
-                    '<td style="' + tdStyle + 'color:var(--text-secondary);"><div style="max-height:3em; overflow:hidden;" title="' + (row[3] || '') + '">' + (row[3] || '') + '</div></td>' +
-                    '<td style="' + tdStyle + 'color:var(--text-secondary);">' + (row[4] || '') + '</td>' +
+                    '<td style="' + tdStyle + 'color:#cbd5e1;"><div style="max-height:3em; overflow:hidden;" title="' + (row[3] || '') + '">' + (row[3] || '') + '</div></td>' +
+                    '<td style="' + tdStyle + 'color:#cbd5e1;">' + (row[4] || '') + '</td>' +
                     '<td style="' + tdStyle + 'text-align:right; font-weight:700; color:#10B981;">' + Components.formatCurrency(row[5] || 0) + '</td>' +
                     '</tr>';
             });
 
             // 합계 풋터
             tableHTML += '</tbody><tfoot style="position:sticky; bottom:0; background:rgba(15,23,42,0.95); backdrop-filter:blur(8px);">' +
-                '<tr><td colspan="5" style="padding:14px; text-align:right; font-weight:700; color:var(--text-primary); border-top:1px solid rgba(148,163,184,0.2);">전체 총액</td>' +
-                '<td style="padding:14px; text-align:right; font-weight:800; color:#3B82F6; font-size:0.9rem; border-top:1px solid rgba(148,163,184,0.2);">' + Components.formatCurrency(totalAmt) + '</td>' +
+                '<tr><td colspan="5" style="padding:14px; text-align:right; font-weight:700; color:#f8fafc; border-top:1px solid rgba(148,163,184,0.2);">전체 총액</td>' +
+                '<td style="padding:14px; text-align:right; font-weight:800; color:#4ade80; font-size:0.95rem; border-top:1px solid rgba(148,163,184,0.2);">' + Components.formatCurrency(totalAmt) + '</td>' +
                 '</tr></tfoot></table>';
 
             tableWrapper.innerHTML = tableHTML;
