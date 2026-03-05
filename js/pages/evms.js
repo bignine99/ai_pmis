@@ -309,6 +309,13 @@ function renderEvmsPage(container) {
 
     container.innerHTML =
 
+        // ════ 상단 컨트롤 영역 ════
+        '<div style="display:flex; justify-content:flex-end; margin-bottom:12px;">' +
+        '<button id="evms-this-week-btn" class="glass-btn btn-primary" style="background:#3B82F6; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-weight:600; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:6px; transition:transform 0.1s; box-shadow:0 4px 6px -1px rgba(59, 130, 246, 0.3);" onmouseover="this.style.transform=\'translateY(-1px)\'" onmouseout="this.style.transform=\'none\'">' +
+        '<i class="fa-solid fa-calendar-check"></i> 금주의 진도관리' +
+        '</button>' +
+        '</div>' +
+
         // ══════ 종합 현황판 (Project Health Check) ══════
         '<div class="glass-card" style="padding:20px 24px;margin-bottom:16px">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">' +
@@ -316,7 +323,9 @@ function renderEvmsPage(container) {
         '<i class="fa-solid fa-heart-pulse" style="font-size:1.1rem;color:var(--accent)"></i>' +
         '<span style="font-size:0.9rem;font-weight:800;color:var(--text-primary)">종합 현황판 (Project Health Check)</span>' +
         '</div>' +
+        '<div style="display:flex;align-items:center;gap:10px">' +
         '<div style="padding:5px 16px;border-radius:20px;background:' + healthBg + ';font-size:0.72rem;font-weight:700;color:' + healthColor + '">' + healthText + '</div>' +
+        '</div>' +
         '</div>' +
 
         // 게이지 3개
@@ -759,6 +768,275 @@ function renderEvmsPage(container) {
             animate();
         });
     }, 600);
+
+    // ── 금주의 진도관리 버튼 이벤트 ──
+    var weekEvmsBtn = document.getElementById('evms-this-week-btn');
+    if (weekEvmsBtn) {
+        weekEvmsBtn.addEventListener('click', showThisWeekEvms);
+    }
+
+    function showThisWeekEvms() {
+        var todayDate = new Date();
+        var day = todayDate.getDay();
+        var diff = todayDate.getDate() - day + (day === 0 ? -6 : 1); // Monday
+        var monday = new Date(todayDate.getTime());
+        monday.setDate(diff);
+        var sunday = new Date(todayDate.getTime());
+        sunday.setDate(diff + 6);
+
+        var sd = monday.toISOString().slice(0, 10);
+        var ed = sunday.toISOString().slice(0, 10);
+
+        var valid = "WHEN1_시작일 IS NOT NULL AND WHEN1_시작일 != '' AND WHEN2종료일 IS NOT NULL AND WHEN2종료일 != ''";
+        var sql = "SELECT WHERE2_동, HOW2_대공종, HOW3_작업명, HOW4_품명, HOW5_규격, SUM(R10_합계_금액) as amt, MAX(\"WHEN4_실행률(%)\") as prog " +
+            "FROM evms WHERE " + valid + " " +
+            "AND WHEN1_시작일 <= '" + ed + "' AND WHEN2종료일 >= '" + sd + "' " +
+            "GROUP BY WHERE2_동, HOW2_대공종, HOW3_작업명, HOW4_품명, HOW5_규격 " +
+            "ORDER BY WHERE2_동, HOW2_대공종, HOW3_작업명";
+
+        var data = DB.runQuery(sql);
+
+        var mainContent = document.querySelector('.main-content');
+        var wrapLeft = 0;
+        var wrapWidth = '100vw';
+        if (mainContent) {
+            var rect = mainContent.getBoundingClientRect();
+            wrapLeft = rect.left;
+            wrapWidth = rect.width + 'px';
+        }
+
+        var overlay = document.createElement('div');
+        overlay.className = 'ai-modal-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = wrapLeft + 'px';
+        overlay.style.width = wrapWidth;
+        overlay.style.bottom = '0';
+        overlay.style.background = 'rgba(0,0,0,0.5)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = '999';
+        overlay.style.backdropFilter = 'blur(4px)';
+
+        var modal = document.createElement('div');
+        modal.className = 'glass-card ai-modal';
+        modal.style.width = '96%';
+        modal.style.maxWidth = '1600px';
+        modal.style.height = '85vh';
+        modal.style.display = 'flex';
+        modal.style.flexDirection = 'column';
+        modal.style.padding = '20px';
+        modal.style.background = 'var(--bg-card)';
+        modal.style.border = '1px solid var(--border)';
+        modal.style.borderRadius = '12px';
+        modal.style.boxShadow = '0 20px 60px rgba(0, 0, 0, 0.2)';
+        modal.style.animation = 'fadeIn 0.2s ease';
+
+        var resizeListener = function () {
+            if (mainContent) {
+                var newRect = mainContent.getBoundingClientRect();
+                overlay.style.left = newRect.left + 'px';
+                overlay.style.width = newRect.width + 'px';
+            }
+        };
+        window.addEventListener('resize', resizeListener);
+
+        var header = document.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        header.style.marginBottom = '20px';
+        header.innerHTML = '<h3 style="margin:0; font-size:1.2rem; color:var(--text-primary); display:flex; align-items:center;"><i class="fa-solid fa-list-check" style="color:#3B82F6; margin-right:8px;"></i> 금주의 진도관리 (' + sd + ' ~ ' + ed + ')' +
+            '<span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal; margin-left:12px; border:1px solid var(--border); padding:4px 8px; border-radius:4px;">조회 건수: ' + (data.values ? data.values.length : 0) + '건</span></h3>' +
+            '<div style="display:flex; align-items:center; gap:10px;">' +
+            '<button id="evms-update-btn" style="padding:6px 16px; border-radius:8px; font-size:0.8rem; font-weight:700; background:#22C55E; color:#fff; border:none; cursor:pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'"><i class="fa-solid fa-cloud-arrow-up"></i> 최종 업데이트</button>' +
+            '<button id="close-evms-modal" style="background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; padding:4px; transition:color 0.2s;"><i class="fa-solid fa-times"></i></button>' +
+            '</div>';
+
+        var tableWrapper = document.createElement('div');
+        tableWrapper.style.flex = '1';
+        tableWrapper.style.overflowY = 'auto';
+        tableWrapper.style.border = '1px solid var(--border)';
+        tableWrapper.style.borderRadius = '8px';
+        tableWrapper.style.background = 'var(--bg-base)';
+
+        if (!data.values || data.values.length === 0) {
+            tableWrapper.innerHTML = '<div style="padding:60px; text-align:center; color:var(--text-muted); font-size:0.9rem;">해당 기간에 진행 중인 작업 내역이 없습니다. (시작일/종료일 데이터 부족 혹은 일정 없음)</div>';
+        } else {
+            var thStyle = 'text-align:left; padding:12px 14px; color:var(--text-secondary); font-weight:700; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg-card); z-index:10; font-size:0.75rem;';
+            var tdStyle = 'padding:10px 14px; font-size:0.75rem; border-bottom:1px solid var(--border); color:var(--text-primary);';
+
+            var tableHTML = '<table style="width:100%; border-collapse:collapse;">' +
+                '<thead><tr>' +
+                '<th style="' + thStyle + ' width:10%">동</th>' +
+                '<th style="' + thStyle + ' width:12%">대공종</th>' +
+                '<th style="' + thStyle + ' width:22%">작업명</th>' +
+                '<th style="' + thStyle + ' width:18%">품명</th>' +
+                '<th style="' + thStyle + ' width:14%">규격</th>' +
+                '<th style="' + thStyle + ' width:12%; text-align:right;">합계 금액</th>' +
+                '<th style="' + thStyle + ' width:12%; text-align:center;">실행률 (%)</th>' +
+                '</tr></thead><tbody>';
+
+            var totalAmt = 0;
+            data.values.forEach(function (row, idx) {
+                totalAmt += (row[5] || 0);
+                var prog = (row[6] !== null && row[6] !== undefined) ? Math.round(row[6] * 100) : 0;
+                tableHTML += '<tr style="transition:background 0.2s; cursor:default;" onmouseover="this.style.background=\'var(--bg-active)\'" onmouseout="this.style.background=\'transparent\'">' +
+                    '<td style="' + tdStyle + '">' + (row[0] || '-') + '<input type="hidden" class="evms-row-key" data-idx="' + idx + '" data-col0="' + (row[0] || '') + '" data-col1="' + (row[1] || '') + '" data-col2="' + (row[2] || '') + '" data-col3="' + (row[3] || '') + '" data-col4="' + (row[4] || '') + '"></td>' +
+                    '<td style="' + tdStyle + '">' + (row[1] || '-') + '</td>' +
+                    '<td style="' + tdStyle + '"><div style="max-height:3em; overflow:hidden;" title="' + (row[2] || '') + '">' + (row[2] || '-') + '</div></td>' +
+                    '<td style="' + tdStyle + 'color:var(--text-secondary);"><div style="max-height:3em; overflow:hidden;" title="' + (row[3] || '') + '">' + (row[3] || '') + '</div></td>' +
+                    '<td style="' + tdStyle + 'color:var(--text-secondary);"><div style="max-height:3em; overflow:hidden;" title="' + (row[4] || '') + '">' + (row[4] || '') + '</div></td>' +
+                    '<td style="' + tdStyle + ' text-align:right; font-weight:600; font-family:\'JetBrains Mono\', monospace; color:var(--accent);">' + (row[5] ? row[5].toLocaleString() : '0') + '</td>' +
+                    '<td style="' + tdStyle + ' text-align:center;"><input type="number" class="evms-prog-input" data-idx="' + idx + '" value="' + prog + '" min="0" max="100" style="width:70px; text-align:right; padding:4px 8px; border:1px solid var(--border); border-radius:4px; font-family:\'JetBrains Mono\', monospace; background:var(--bg-input); color:var(--text-primary); outline:none;"></td>' +
+                    '</tr>';
+            });
+
+            tableHTML += '</tbody><tfoot style="position:sticky; bottom:0; background:var(--bg-card); z-index:10;">' +
+                '<tr>' +
+                '<td colspan="5" style="padding:12px 14px; font-weight:800; text-align:right; border-top:2px solid var(--border); color:var(--text-primary);">총 합계 금액</td>' +
+                '<td style="padding:12px 14px; font-weight:800; text-align:right; border-top:2px solid var(--border); font-family:\'JetBrains Mono\', monospace; color:var(--accent);">' + totalAmt.toLocaleString() + '</td>' +
+                '<td style="padding:12px 14px; border-top:2px solid var(--border);"></td>' +
+                '</tr>' +
+                '</tfoot></table>';
+
+            tableWrapper.innerHTML = tableHTML;
+        }
+
+        modal.appendChild(header);
+        modal.appendChild(tableWrapper);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        var closeBtn = document.getElementById('close-evms-modal');
+        function closeModal() {
+            window.removeEventListener('resize', resizeListener);
+            if (document.body.contains(overlay)) {
+                document.body.removeChild(overlay);
+            }
+        }
+        closeBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) closeModal();
+        });
+
+        // "최종 업데이트" 이벤트
+        var updateBtn = document.getElementById('evms-update-btn');
+        if (updateBtn) {
+            updateBtn.addEventListener('click', function () {
+                if (!confirm("현재 화면에 보이는 실행률로 일괄 업데이트 및 CSV 파일을 생성하시겠습니까? (이 작업 후 전체 데이터가 새로고침됩니다.)")) {
+                    return;
+                }
+
+                var btn = this;
+                var oldHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 처리 중...';
+                btn.disabled = true;
+
+                // UI block 방지를 위해 setTimeout 내에서 처리
+                setTimeout(function () {
+                    try {
+                        // 1. 모든 입력된값 수집
+                        var inputs = tableWrapper.querySelectorAll('.evms-prog-input');
+                        var sqls = [];
+
+                        inputs.forEach(function (inp) {
+                            var v = parseFloat(inp.value);
+                            if (isNaN(v)) return;
+                            var valDec = v / 100;
+                            var idx = inp.getAttribute('data-idx');
+                            var keyEl = tableWrapper.querySelector('input.evms-row-key[data-idx="' + idx + '"]');
+                            if (keyEl) {
+                                var col0 = keyEl.getAttribute('data-col0').replace(/'/g, "''");
+                                var col1 = keyEl.getAttribute('data-col1').replace(/'/g, "''");
+                                var col2 = keyEl.getAttribute('data-col2').replace(/'/g, "''");
+                                var col3 = keyEl.getAttribute('data-col3').replace(/'/g, "''");
+                                var col4 = keyEl.getAttribute('data-col4').replace(/'/g, "''");
+
+                                var upSql = "UPDATE evms SET \"WHEN4_실행률(%)\" = " + valDec + " " +
+                                    "WHERE IFNULL(WHERE2_동,'') = '" + col0 + "' " +
+                                    "AND IFNULL(HOW2_대공종,'') = '" + col1 + "' " +
+                                    "AND IFNULL(HOW3_작업명,'') = '" + col2 + "' " +
+                                    "AND IFNULL(HOW4_품명,'') = '" + col3 + "' " +
+                                    "AND IFNULL(HOW5_규격,'') = '" + col4 + "'";
+                                sqls.push(upSql);
+                            }
+                        });
+
+                        // 2. DB 업데이트
+                        if (sqls.length > 0) {
+                            // Run sequentially
+                            for (var i = 0; i < sqls.length; i++) {
+                                DB.runQuery(sqls[i]);
+                            }
+                        }
+
+                        // 3. CSV 생성 및 다운로드
+                        var allDataObj = DB.runQuery("SELECT * FROM evms");
+                        if (allDataObj && allDataObj.columns && allDataObj.values) {
+                            var cols = allDataObj.columns;
+                            var vals = allDataObj.values;
+
+                            var csvRows = [];
+                            var headerStr = cols.map(function (c) {
+                                var s = String(c);
+                                if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) return '"' + s.replace(/"/g, '""') + '"';
+                                return s;
+                            }).join(',');
+                            csvRows.push(headerStr);
+
+                            vals.forEach(function (r) {
+                                var rowStr = r.map(function (val) {
+                                    if (val === null || val === undefined) return '';
+                                    var s = String(val);
+                                    if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) return '"' + s.replace(/"/g, '""') + '"';
+                                    return s;
+                                }).join(',');
+                                csvRows.push(rowStr);
+                            });
+
+                            var csvContent = "\ufeff" + csvRows.join("\n"); // Add BOM
+                            var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                            var link = document.createElement("a");
+                            var url = URL.createObjectURL(blob);
+                            var now = new Date();
+                            var yyyy = now.getFullYear();
+                            var mm = String(now.getMonth() + 1).padStart(2, '0');
+                            var dd = String(now.getDate()).padStart(2, '0');
+                            var filename = "evms_" + yyyy + mm + dd + ".csv";
+
+                            link.setAttribute("href", url);
+                            link.setAttribute("download", filename);
+                            link.style.visibility = 'hidden';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+
+                            alert('업데이트가 완료되었으며, 최신 데이터가 ' + filename + ' 파일로 다운로드되었습니다.\n(변경된 내용은 앱 전체 보드에 즉시 반영됩니다.)');
+                        } else {
+                            alert('DB에서 최신 데이터를 가져오는 데 문제가 발생했습니다.');
+                        }
+
+                        // 모달 닫기
+                        closeModal();
+
+                        // 4. 앱 데이터 재조회 및 화면 갱신
+                        var contentArea = document.getElementById('content-area');
+                        if (contentArea) {
+                            window.renderEvmsPage(contentArea);
+                        }
+
+                    } catch (e) {
+                        console.error('Update failed:', e);
+                        alert('업데이트 중 오류가 발생했습니다: ' + e.message);
+                        btn.innerHTML = oldHtml;
+                        btn.disabled = false;
+                    }
+                }, 50); // slight delay to show loading state
+            });
+        }
+    }
 }
 
 function buildEvmsMetricRow(label, value) {
